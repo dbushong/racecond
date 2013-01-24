@@ -1,8 +1,7 @@
-
-Template.board.show = -> !!Session.get('game_id')
-
 email = (uid) ->
   Meteor.users.findOne(uid).emails[0].address
+
+Template.board.show = -> !!Session.get('game_id')
 
 _.extend Template.lobby,
   email: email
@@ -36,10 +35,10 @@ _.extend Template.lobby,
       Requests.remove rid
       false
     'click a.accept-req': (e) ->
-      req = Requests.findOne(e.target.dataset.id)
-      console.log "accept request #{req._id}"
-      Requests.remove req._id
-      startGame req.from
+      rid = e.target.dataset.id
+      console.log "accept request #{rid}"
+      Meteor.call 'startGame', rid, (err, game_id) ->
+        Session.set 'game_id', game_id
       false
     'click a.reject-req': (e) ->
       rid = e.target.dataset.id
@@ -49,6 +48,11 @@ _.extend Template.lobby,
 
 Meteor.startup ->
   Meteor.subscribe 'players'
-  Meteor.autorun ->
-    Meteor.subscribe 'mygames', Meteor.userId()
-    Meteor.subscribe 'requests', Meteor.userId()
+  Meteor.autosubscribe ->
+    uid = Meteor.userId() # just to create the dependency
+    Meteor.subscribe 'mygames'
+    Meteor.subscribe 'requests'
+  Meteor.autosubscribe ->
+    uid = Meteor.userId() # just to create the dependency
+    gid = Session.get 'game_id'
+    Meteor.subscribe 'game', gid if gid

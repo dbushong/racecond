@@ -1,0 +1,53 @@
+<template name="board">
+{{#if show}}
+  <h2>Vars</h2>
+  {{> vars}}
+
+  <h2>Hand</h2>
+  {{> hand}}
+
+  <h2>Program</h2>
+  {{> program}}
+
+  <h2>Discards</h2> 
+  {{> discards}}
+{{/if}}
+</template>
+
+<template name="vars">
+  <div id="x">x: {{x}}</div>
+  <div id="i">i: {{i}}</div>
+</template>
+
+<template name="hand">
+  <ul id="hand">
+{{#each cards}}
+    <li title="{{cardDescr this}}">{{this}}</li> 
+{{/each}}
+  </ul> 
+</template>
+
+<template name="program">
+  <ul id="program">
+{{#each entries}}
+    <li title="{{cardDescr card}}">
+  {{#each threads}}
+      [Thread {{this}}]
+  {{/each}}
+      {{card}}
+    </li>
+{{/each}}
+  </ul> 
+</template>
+
+<template name="discards">
+{{#if cards}}
+  <ul id="discards">
+  {{#each cards}}
+    <li title="{{cardDescr this}}">{{this}}</li> 
+  {{/each}}
+  </ul>
+{{else}}
+  (empty discard pile)
+{{/if}}
+</template>

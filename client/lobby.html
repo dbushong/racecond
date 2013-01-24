@@ -1,0 +1,38 @@
+<template name="lobby">
+{{#if show}}
+  {{#if requests}}
+  <h2>Pending Requests</h2>
+  <ul>
+    {{#each requests}}
+      {{#if outBoundRequest}}
+      -&gt; {{email to}} <a href="#" class="cancel-req" data-id="{{_id}}">cancel</a>
+      {{else}}
+      &lt;- {{email from}}
+      <a href="#" class="accept-req" data-id="{{_id}}">accept</a>
+      <a href="#" class="reject-req" data-id="{{_id}}">reject</a>
+      {{/if}}
+    {{/each}}
+  </ul>
+  {{/if}}
+
+  {{#if players}}
+  <h2>Available Players</h2>
+  <ul>
+    {{#each players}}
+    <li><a href="#" class="start-game" data-id="{{_id}}" title="Start Game">{{username}}</a></li>
+    {{/each}}
+  </ul>
+  {{else}}
+    Sorry, no players currently available for a new game.
+  {{/if}}
+
+  {{#if games}}
+  <h2>Current Games</h2>
+  <ul>
+    {{#each games}}
+    <li><a href="#" class="resume-game" data-id="{{_id}}">vs. {{otherPlayer}}</a></li> 
+    {{/each}}
+  </ul>
+  {{/if}}
+{{/if}}
+</template>

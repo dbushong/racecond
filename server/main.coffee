@@ -3,12 +3,7 @@ popRandom = (arr, num=1) ->
   if num is 1 then res[0] else res
 
 Meteor.publish 'mygames', ->
-  Games.find { 'players.uid': @userId }, fields: { players: 1 }
-
-Meteor.publish 'game', (gid) ->
-  games = Games.find gid, fields: { secret: 0 }
-  throw new Meteor.Error('invalid game id') unless @userId in games[0].players
-  games
+  Games.find { players: @userId }, fields: { secret: 0 }
 
 # TODO: figure out how to publish your hand
 #Meteor.publish 'hand', (gid) ->

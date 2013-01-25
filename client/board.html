@@ -30,11 +30,11 @@
 <template name="program">
   <ul id="program">
 {{#each entries}}
-    <li title="{{cardDescr card}}">
+    <li title="{{descr}}">
   {{#each threads}}
       [Thread {{this}}]
   {{/each}}
-      {{card}}
+      {{name}}
     </li>
 {{/each}}
   </ul> 

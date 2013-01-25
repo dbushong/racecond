@@ -1,16 +1,20 @@
-game = null
-Meteor.startup ->
-  game = -> Games.findOne(Session.get('game_id'))
+game = -> Games.findOne(Session.get('game_id'))
 
-Template.board.show = -> !!Session.get('game_id')
+Template.board.show = -> !!game()
 
-Template.vars[j] = (-> game()[j]) for j in ['x', 'i']
-
-# TODO query your hand somehow
-Template.hand.cards = -> []
+Template.vars.x = -> game().x
+Template.vars.i = -> game().i
 
 Template.discards.cards = -> game().discards
 
-Template.program.threads = -> (i + 1 for t, i in game().threads when t?)
+# TODO query your hand somehow
+Template.hand.cards = -> []
+Template.hand.cardDescr    =
+Template.program.cardDescr = (name) -> Cards[name].descr
 
-Template.program.entries = -> game().program
+Template.program.entries = ->
+  g = game()
+  for name, i in g.program
+    name:    name
+    descr:   Cards[name].descr
+    threads: j+1 for t, j in g.threads when t is i

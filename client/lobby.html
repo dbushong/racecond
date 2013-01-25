@@ -5,9 +5,9 @@
   <ul>
     {{#each requests}}
       {{#if outBoundRequest}}
-      -&gt; {{email to}} <a href="#" class="cancel-req" data-id="{{_id}}">cancel</a>
+      -&gt; {{username to}} <a href="#" class="cancel-req" data-id="{{_id}}">cancel</a>
       {{else}}
-      &lt;- {{email from}}
+      &lt;- {{username from}}
       <a href="#" class="accept-req" data-id="{{_id}}">accept</a>
       <a href="#" class="reject-req" data-id="{{_id}}">reject</a>
       {{/if}}
@@ -19,7 +19,7 @@
   <h2>Available Players</h2>
   <ul>
     {{#each players}}
-    <li><a href="#" class="start-game" data-id="{{_id}}" title="Start Game">{{username}}</a></li>
+    <li><a href="#" class="start-game" data-id="{{_id}}" title="Start Game">{{username _id}}</a></li>
     {{/each}}
   </ul>
   {{else}}

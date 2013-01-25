@@ -10,12 +10,11 @@ _.extend Template.lobby,
   outBoundRequest: -> @from is Meteor.userId()
 
   otherPlayer: ->
-    player = @players[if @players[0].uid is Meteor.userid() then 1 else 0]
-    username player.uid
+    username @players[if @players[0] is Meteor.userId() then 1 else 0]
 
   requests: -> Requests.find({}).fetch()
 
-  games: -> []
+  games: -> Games.find({}).fetch()
 
   events:
     'click a.start-game': (e) ->
@@ -44,4 +43,7 @@ _.extend Template.lobby,
       rid = e.target.dataset.id
       console.log "reject request #{rid}"
       Requests.remove rid
+      false
+    'click a.resume-game': (e) ->
+      Session.set 'game_id', e.target.dataset.id
       false

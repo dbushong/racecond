@@ -1,6 +1,10 @@
 game = -> Games.findOne(Session.get('game_id'))
 
 Template.board.show = -> !!game()
+Template.board.events
+  'click #back-to-lobby': ->
+    Session.set('game_id', null)
+    false
 
 Template.vars.x = -> game().x
 Template.vars.i = -> game().i

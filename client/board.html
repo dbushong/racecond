@@ -34,7 +34,13 @@
 {{#if cards}}
   <ul id="hand">
   {{#each cards}}
-    <li title="{{descr}}">{{name}}</li> 
+    <li title="{{descr}}">
+    {{#if currentPlayer}}
+      <a href="#" class="play-card">{{name}}</a>
+    {{else}}
+      {{name}}
+    {{/if}}
+    </li> 
   {{/each}}
   </ul> 
 {{else}}

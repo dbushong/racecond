@@ -42,6 +42,7 @@ Meteor.methods
       created_at:   now
       updated_at:   now
       deck:         deck
+      request_id:   request_id
 
     for uid, i in players
       Hands.insert

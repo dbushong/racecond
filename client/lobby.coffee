@@ -21,7 +21,13 @@ _.extend Template.lobby,
       uid = e.target.dataset.id
       console.log "request game with user #{uid}"
       if Meteor.userId()?
-        Requests.insert created_at: (new Date), from: Meteor.userId(), to: uid
+        Requests.insert {created_at: (new Date),from: Meteor.userId(), to: uid},
+          (err, rid) ->
+            if err
+              console.log err
+              alert "failed to request new game: #{err.reason}"
+            else
+              Session.set 'last_request_id', rid
       else
         alert 'Please login to start a game'
       false

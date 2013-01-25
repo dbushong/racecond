@@ -20,6 +20,12 @@ Template.status.current = ->
 
 Template.hand.cards = ->
   { name, descr: Cards[name].descr } for name in hand()
+Template.hand.currentPlayer = -> isCurrentPlayer()
+Template.hand.events
+  'click a.play-card': (e) ->
+    card = e.target.firstChild.nodeValue
+    alert "playing card #{card}"
+    false
 
 Template.program.entries = ->
   g = game()

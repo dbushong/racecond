@@ -123,3 +123,4 @@ Cards =
 game   = -> Games.findOne Session.get('game_id')
 player = -> if game().players[0] is Meteor.userId() then 0 else 1
 hand   = -> Hands.findOne(game_id: game()._id).cards
+isCurrentPlayer = -> game().cur_player is player()

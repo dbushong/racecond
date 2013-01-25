@@ -1,5 +1,8 @@
 <template name="board">
 {{#if show}}
+  <h2>Status</h2>
+  {{> status}}
+
   <h2>Vars</h2>
   {{> vars}}
 
@@ -14,6 +17,12 @@
 
   <div><a href="#" id="back-to-lobby">Back to Lobby</a></div>
 {{/if}}
+</template>
+
+<template name="status">
+  <div>Your goal: x {{goal}}</div>
+  <div>Current player: {{current}}</div>
+  <div>Actions remaining: {{actions_left}}</div>
 </template>
 
 <template name="vars">

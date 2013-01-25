@@ -5,4 +5,5 @@ Meteor.startup ->
   Meteor.autosubscribe ->
     uid = Meteor.userId() # just to create the dependency
     Meteor.subscribe 'mygames'
+    Meteor.subscribe 'myhands'
     Meteor.subscribe 'requests'

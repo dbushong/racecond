@@ -31,11 +31,15 @@
 </template>
 
 <template name="hand">
+{{#if cards}}
   <ul id="hand">
-{{#each cards}}
-    <li title="{{cardDescr this}}">{{this}}</li> 
-{{/each}}
+  {{#each cards}}
+    <li title="{{descr}}">{{name}}</li> 
+  {{/each}}
   </ul> 
+{{else}}
+  Your hand is empty.
+{{/if}}
 </template>
 
 <template name="program">

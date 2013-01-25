@@ -8,12 +8,18 @@
 , program:      [ 'card_id', ... ]
 , discard:      [ 'card_id', ... ]
 , created_at:   Date
-, secret:       { deck:  [ 'card_id', ... ]
-                , hands: [ [ 'card_id', ... ], [ 'card_id', ... ] ]
-                }
+, deck:         [ 'card_id', ... ] // kept secret from players
 }
 ###
 Games = new Meteor.Collection 'games'
+
+###
+{ game_id: <reference>
+, user_id: <reference>
+, cards:   [ 'card_id', ... ]
+}
+###
+Hands = new Meteor.Collection 'hands'
 
 ###
 { from:       '<user _id>'
@@ -113,3 +119,7 @@ Cards =
   'while (i > 0)':
     descr: 'FIXME'
     indenter: true
+
+game   = -> Games.findOne Session.get('game_id')
+player = -> if game().players[0] is Meteor.userId() then 0 else 1
+hand   = -> Hands.findOne(game_id: game()._id).cards

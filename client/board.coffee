@@ -1,6 +1,3 @@
-game   = -> Games.findOne(Session.get('game_id'))
-player = -> if game().players[0] is Meteor.userId() then 0 else 1
-
 Template.board.show = -> !!game()
 Template.board.events
   'click #back-to-lobby': ->
@@ -21,14 +18,14 @@ Template.status.current = ->
   res += ' (you)' if cur is Meteor.userId()
   res
 
-# TODO query your hand somehow
-Template.hand.cards = -> []
-Template.hand.cardDescr    =
-Template.program.cardDescr = (name) -> Cards[name].descr
+Template.hand.cards = ->
+  { name, descr: Cards[name].descr } for name in hand()
 
 Template.program.entries = ->
   g = game()
   for name, i in g.program
-    name:    name
+    {
+    name
     descr:   Cards[name].descr
     threads: j+1 for t, j in g.threads when t is i
+    }

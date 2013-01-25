@@ -3,7 +3,7 @@ username = (uid) -> Meteor.users.findOne(uid).username
 _.extend Template.lobby,
   username: username
 
-  show: -> !Session.get('game_id')
+  show: -> !game()
 
   players: -> Meteor.users.find(_id: { '$ne': Meteor.userId() }).fetch()
 

@@ -39,7 +39,6 @@ Requests = new Meteor.Collection 'requests'
 Cards =
   'i = 1':
     descr: 'FIXME'
-    copies: 0
   'i = -1':
     descr: 'FIXME'
     copies: 2
@@ -69,9 +68,9 @@ Cards =
     descr: 'FIXME'
   'i = abs(i)':
     descr: 'FIXME'
-  'i = min(i-1, -5)':
-    descr: 'FIXME'
   'i = min(i+1, 5)':
+    descr: 'FIXME'
+  'i = max(i-1, -5)':
     descr: 'FIXME'
   'if (i < 0)':
     descr: 'FIXME'
@@ -125,5 +124,17 @@ Cards =
   'while (i > 0)':
     descr: 'FIXME'
     indenter: true
+  'x = x + i':
+    descr: 'FIXME'
+    count: 4
+  'x = x - i':
+    descr: 'FIXME'
+    count: 4
+  'x = x - 1':
+    descr: 'FIXME'
+    count: 2
+  'x = x + 1':
+    descr: 'FIXME'
+    count: 2
 
 game = (gid = Session.get('game_id')) -> Games.findOne gid

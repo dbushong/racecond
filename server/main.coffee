@@ -72,10 +72,9 @@ Meteor.methods
 
     flip    = !!Math.floor(Math.random() * 2)
     players = if flip then [ req.from, req.to ] else [ req.to, req.from ]
-    deck    = _.shuffle(
-                _.flatten(
-                  _(count ? 1).times(-> name) for name, {count} of Cards)
-              )
+    deck    = []
+    (deck.push(name) for i in [1..(count ? 1)]) for name, {count} of Cards
+    deck    = _.shuffle deck
     hands   = [4, 5].map (n) -> deck.splice(0, n)
     hcounts = {}
     hcounts[players[0]] = 4

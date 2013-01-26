@@ -3,9 +3,6 @@
   <h2>Status</h2>
   {{> status}}
 
-  <h2>Vars</h2>
-  {{> vars}}
-
   <h2>Hand</h2>
   {{> hand}}
 
@@ -15,7 +12,10 @@
   <h2>Discards</h2> 
   {{> discards}}
 
-  <div><a href="#" id="back-to-lobby">Back to Lobby</a></div>
+  <h2>Log</h2>
+  {{> log}}
+
+  <p><a href="#" id="back-to-lobby">Back to Lobby</a></p>
 {{/if}}
 </template>
 
@@ -23,11 +23,8 @@
   <div>Your goal: x {{goal}}</div>
   <div>Current player: {{current}}</div>
   <div>Actions remaining: {{actions_left}}</div>
-</template>
-
-<template name="vars">
-  <div id="x">x: {{x}}</div>
-  <div id="i">i: {{i}}</div>
+  <div>x: {{x}}</div>
+  <div>i: {{i}}</div>
 </template>
 
 <template name="hand">
@@ -35,16 +32,30 @@
   <ul id="hand">
   {{#each cards}}
     <li title="{{descr}}">
-    {{#if currentPlayer}}
-      <a href="#" class="play-card">{{name}}</a>
-    {{else}}
       {{name}}
+      [
+    {{#if playable}}
+      <a href="#" data-index="{{index}}" class="play-card">play</a>
+    {{else}}
+      play
     {{/if}}
+    |
+    {{#if currentPlayer}}
+      <a href="#" data-index="{{index}}" class="discard-card">discard</a>
+    {{else}}
+      discard
+    {{/if}}
+    ]
     </li> 
   {{/each}}
   </ul> 
 {{else}}
   Your hand is empty.
+{{/if}}
+{{#if canDrawCard}}
+  <a href="#" id="draw-card">Draw a Card</a>
+{{else}}
+  Draw a Card
 {{/if}}
 </template>
 
@@ -71,4 +82,12 @@
 {{else}}
   (empty discard pile)
 {{/if}}
+</template>
+
+<template name="log">
+  <ul>
+{{#each entries}}
+    <li>{{this}}</li>
+{{/each}}
+  </ul>   
 </template>

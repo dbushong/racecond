@@ -1,5 +1,3 @@
-username = (uid) -> Meteor.users.findOne(uid).username
-
 _.extend Template.lobby,
   username: username
 
@@ -14,7 +12,7 @@ _.extend Template.lobby,
 
   requests: -> Requests.find({}).fetch()
 
-  games: -> Games.find({}).fetch()
+  games: -> Games.find(finished_at: null).fetch()
 
   events:
     'click a.start-game': (e) ->

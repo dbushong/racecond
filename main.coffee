@@ -2,13 +2,17 @@
 { players:      [ '<_id of negative player>', '<... positive player>' ]
 , x:            -5..5
 , i:            -5..5
-, cur_player:   0|1
+, cur_player:   <user id>
+, winner:       null|<user id>
 , actions_left: 1|2
 , threads:      [ null|index-into-program, same, same ]
 , program:      [ 'card_id', ... ]
 , discard:      [ 'card_id', ... ]
 , created_at:   Date
+, updated_at:   Date
+, finished_at:  null|Date
 , deck:         [ 'card_id', ... ] // kept secret from players
+, log:          [ { who: null|<uid>, what: 'msg', when: Date }, ... ]
 }
 ###
 Games = new Meteor.Collection 'games'
@@ -120,7 +124,4 @@ Cards =
     descr: 'FIXME'
     indenter: true
 
-game   = -> Games.findOne Session.get('game_id')
-player = -> if game().players[0] is Meteor.userId() then 0 else 1
-hand   = -> Hands.findOne(game_id: game()._id).cards
-isCurrentPlayer = -> game().cur_player is player()
+game = (gid = Session.get('game_id')) -> Games.findOne gid

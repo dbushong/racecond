@@ -39,7 +39,8 @@ Template.hand.canDrawCard = -> isCurrentPlayer() and hand().length < 5
 Template.hand.events
   'click a.play-card': (e) ->
     i = e.target.dataset.index
-    alert "(not really) playing card: #{hand()[i]}"
+    Meteor.call 'playCard', game()._id, i, (err) ->
+      alert "failed to play card: #{err.reason}" if err
     false
   'click a.discard-card': (e) ->
     i = e.target.dataset.index
@@ -59,9 +60,10 @@ Template.log.entries = ->
 
 Template.program.entries = ->
   g = game()
-  for name, i in g.program
+  for [name, indent], i in g.program
     {
     name
     descr:   Cards[name].descr
+    indent:  ('&nbsp;&nbsp;' for i in [0...indent]).join('')
     threads: j+1 for t, j in g.threads when t is i
     }

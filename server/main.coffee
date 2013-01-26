@@ -88,7 +88,7 @@ Meteor.methods
       cur_player:   players[0]
       actions_left: 2
       threads:      [ 0, null, null ]
-      program:      [ 'i = 1' ]
+      program:      [ ['i = 1', 0] ]
       discard:      []
       created_at:   now
       updated_at:   now
@@ -156,6 +156,7 @@ Meteor.methods
         [ 'actions_left',           -1 ]
         [ "hand_counts.#{@userId}", -1 ]
       ]
+
   forfeit: (gid) ->
     g = game(gid)
 
@@ -170,3 +171,62 @@ Meteor.methods
         finished_at: (new Date)
         winner:      _.without(g.players, @userId)[0]
         cur_player:  null
+
+  playCard: (gid, i, args={}) ->
+    g = game(gid)
+    h = Hands.findOne(user_id: @userId, game_id: gid)
+
+    # TODO: DRY
+    if g.cur_player isnt @userId
+      throw new Meteor.Error('not your turn')
+
+    if i < 0 or i >= h.cards.length
+      throw new Meteor.Error("invalid hand index: #{i}")
+
+    card = h.cards.splice(i, 1)[0]
+    removeCard = -> Hands.update h._id, $set: { cards: h.cards }
+
+    if card.actions > g.actions_left
+      throw new Meteor.Error("you don't have enough actions to play that")
+
+    # if it's an instruction, let's stick it on the end
+    unless card.actions
+      # remove card from hand
+      removeCard()
+
+      # validate requested indentation level
+      [min_indent, max_indent] = validIndentRange(g.program)
+      unless min_indent <= args.indent <= max_indent
+        throw new Meteor.Error(
+          "indentation must be #{min_indent}-#{max_indent}")
+
+      # add card to program, decrement action count, decrement hand count
+      updateGame gid, { who: @userId, what: 'added instruction "#{card}"' },
+        $push: { program: [ card, args.indent ] }
+        $inc:  _.object [
+          [ 'actions_left',           -1 ]
+          [ "hand_counts.#{@userId}", -1 ]
+        ]
+
+      return
+
+    # ok, it's a special action.  switch of dooooom
+    update = {}
+    logs   = []
+    switch card
+      when 'trade hands'
+        other_player = _.without(g.players, @userId)[0]
+        other_hand   = Hands.findOne game_id: gid, user_id: other_player
+
+        Hands.update h._id,          $set: { cards: other_hand.cards }
+        Hands.update other_hand._id, $set: { cards: h.cards          }
+
+        update =
+          $set: _.object [
+            [ "hand_counts.#{@userId}", other_hand.cards.length ]
+            [ "hand_counts.#{other_player}",     h.cards.length ]
+          ]
+        
+        logs.push who: @userId, what: 'traded hands'
+      else
+        throw new Meteor.Error("card #{card} not yet implemented")

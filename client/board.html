@@ -66,10 +66,11 @@
   <ul id="program">
 {{#each entries}}
     <li title="{{descr}}">
+  {{{indent}}}
+      {{name}}
   {{#each threads}}
       [Thread {{this}}]
   {{/each}}
-      {{name}}
     </li>
 {{/each}}
   </ul> 

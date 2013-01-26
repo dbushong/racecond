@@ -6,7 +6,7 @@
 , winner:       null|<user id>
 , actions_left: 1|2
 , threads:      [ null|index-into-program, same, same ]
-, program:      [ 'card_id', ... ]
+, program:      [ ['card_id', rel_indent], ... ]
 , discard:      [ 'card_id', ... ]
 , created_at:   Date
 , updated_at:   Date
@@ -107,7 +107,7 @@ Cards =
     descr: 'FIXME'
     actions: 1
   'trade hands':
-    descr: 'FIXME'
+    descr: "Trade hands with your opponent.\nYou receive the cards that were in your opponent's hand, and your opponent receives the cards that were in your hand (not including this one)."
     actions: 1
   'while (i < 0)':
     descr: 'FIXME'
@@ -138,3 +138,21 @@ Cards =
     count: 2
 
 game = (gid = Session.get('game_id')) -> Games.findOne gid
+
+validIndentRange = (prog, pos=prog.length) ->
+  # validate position
+  unless 1 <= pos <= prog.length
+    throw new Meteor.Error("invalid pos specified; must be 1-#{prog.length}")
+
+  # starting (relative) allowed indentation level
+  min_indent = max_indent = 0
+
+  if prog.length > 0
+    # if preceding card is indenter, we have to indent by 1
+    if Cards[prog[pos-1][0]].indenter
+      max_indent = min_indent = 1
+    # otherwise, check to see how deep we can exdent
+    else
+      min_indent -= indent for [card, indent] in prog[0..pos-1]
+
+  [min_indent, max_indent]

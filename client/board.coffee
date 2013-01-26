@@ -1,3 +1,34 @@
+playInstructionCard = (pos) ->
+  g = game()
+  [min_indent, max_indent] = validIndentRange g.program
+  indent = min_indent
+
+  # if there's actually a range to choose from, let the user pick
+  if min_indent isnt max_indent
+    loop
+      indent = Number(prompt(
+        "Select relative indent level from #{min_indent} to #{max_indent}:"))
+      break if indent? and min_indent <= indent <= max_indent
+
+  Meteor.call 'playCard', g._id, pos, { indent }, (err) ->
+    handleErr 'play instruction card', err
+
+playSpecialActionCard = (card, pos) ->
+  alert "FIXME: special action card playing not yet implemented"
+
+isPlayable = (card) ->
+  g = game()
+
+  return false if (card.actions or 1) > g.actions_left
+
+  switch card.name
+    when 'else', 'break'
+      return false if g.program.length is 0
+      tree = AST g.program
+      # TODO: more work
+    else
+      true
+
 Template.board.show = -> !!game()
 Template.board.events
   'click #back-to-lobby': ->
@@ -32,15 +63,18 @@ Template.hand.cards = ->
     name:     "#{name}#{if card.actions is 2 then ' -- 2 actions' else ''}"
     descr:    card.descr
     index:    i
-    playable: isCurrentPlayer() and (card.actions or 1) <= game().actions_left
+    playable: isCurrentPlayer() and isPlayable(card)
     }
 Template.hand.currentPlayer = -> isCurrentPlayer()
 Template.hand.canDrawCard = -> isCurrentPlayer() and hand().length < 5
 Template.hand.events
   'click a.play-card': (e) ->
-    i = e.target.dataset.index
-    Meteor.call 'playCard', game()._id, i, (err) ->
-      alert "failed to play card: #{err.reason}" if err
+    pos  = e.target.dataset.index
+    card = Cards[hand()[pos]]
+    if card.actions
+      playSpecialActionCard pos, card
+    else
+      playInstructionCard pos
     false
   'click a.discard-card': (e) ->
     i = e.target.dataset.index
@@ -60,10 +94,12 @@ Template.log.entries = ->
 
 Template.program.entries = ->
   g = game()
-  for [name, indent], i in g.program
+  indent = 0
+  for [name, shift], i in g.program
+    indent += shift
     {
     name
     descr:   Cards[name].descr
-    indent:  ('&nbsp;&nbsp;' for i in [0...indent]).join('')
+    indent:  ('&nbsp;&nbsp;' for x in [0...indent]).join('')
     threads: j+1 for t, j in g.threads when t is i
     }

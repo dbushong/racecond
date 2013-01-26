@@ -201,7 +201,7 @@ Meteor.methods
           "indentation must be #{min_indent}-#{max_indent}")
 
       # add card to program, decrement action count, decrement hand count
-      updateGame gid, { who: @userId, what: 'added instruction "#{card}"' },
+      updateGame gid, { who: @userId, what: "added instruction: #{card}" },
         $push: { program: [ card, args.indent ] }
         $inc:  _.object [
           [ 'actions_left',           -1 ]

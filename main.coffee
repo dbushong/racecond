@@ -136,6 +136,7 @@ Cards =
   'x = x + 1':
     descr: 'FIXME'
     count: 2
+card.name = name for name, card of Cards # for convenience
 
 game = (gid = Session.get('game_id')) -> Games.findOne gid
 
@@ -156,3 +157,15 @@ validIndentRange = (prog, pos=prog.length) ->
       min_indent -= indent for [card, indent] in prog[0..pos-1]
 
   [min_indent, max_indent]
+
+AST = (prog) ->
+  tree = ptr = { seq: [] }
+  for [ instr, shift ] in prog
+    if shift > 0 # really, 1
+      ptr = ptr.seq[ptr.seq.length-1]
+      ptr.seq = []
+    else if shift < 0 # exdenting 
+      ptr = ptr.parent for i in [shift...0]
+
+    ptr.seq.push { instr, parent: ptr }
+  tree

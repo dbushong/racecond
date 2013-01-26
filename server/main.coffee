@@ -20,18 +20,23 @@ updateGame = (gid, logs, changes) ->
 
 Meteor.startup ->
   # game logic triggered events
-  Games.find(finished_at: null).observe
+  o = Games.find(finished_at: null).observe
     changed: (g, i, old) ->
       now  = new Date
       set  = {}
       logs = []
+
+      # can we stop watching now?
+      if g.finished_at? and not old.finished_at?
+        o.stop()
+        return
 
       # is the game over? 
       if Math.abs(g.x) >= 5
         logs.push
           who:  (who = g.players[if g.x > 0 then 1 else 0])
           what: "won the game with x = #{g.x}"
-        _.extend set, finished_at: now, winner: who
+        _.extend set, finished_at: now, winner: who, cur_player: null
 
       # game not over
       else
@@ -67,10 +72,10 @@ Meteor.methods
 
     flip    = !!Math.floor(Math.random() * 2)
     players = if flip then [ req.from, req.to ] else [ req.to, req.from ]
-    deck    = []
-    for name, {count} of Cards
-      deck.push(name) for i in [1..(count ? 1)]
-    deck    = _.shuffle deck
+    deck    = _.shuffle(
+                _.flatten(
+                  _(count ? 1).times(-> name) for name, {count} of Cards)
+              )
     hands   = [4, 5].map (n) -> deck.splice(0, n)
     hcounts = {}
     hcounts[players[0]] = 4
@@ -152,3 +157,17 @@ Meteor.methods
         [ 'actions_left',           -1 ]
         [ "hand_counts.#{@userId}", -1 ]
       ]
+  forfeit: (gid) ->
+    g = game(gid)
+
+    unless @userId in g.players
+      throw new Meteor.Error('you are not a player in this game')
+
+    if g.finished_at
+      throw new Meteor.Error('game is already over')
+
+    updateGame gid, { who: @userId, what: 'forfeited the game' },
+      $set:
+        finished_at: (new Date)
+        winner:      _.without(g.players, @userId)[0]
+        cur_player:  null

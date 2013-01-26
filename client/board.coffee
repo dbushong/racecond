@@ -3,6 +3,11 @@ Template.board.events
   'click #back-to-lobby': ->
     Session.set('game_id', null)
     false
+  'click #forfeit': ->
+    if confirm('Are you sure you want to forfeit?')
+      Meteor.call 'forfeit', game()._id, (err) ->
+        alert("Forfeiting failed: #{err.reason}") if err
+    false
 
 Template.discards.cards = ->
   { name, descr: Cards[name].descr } for name in game().discard

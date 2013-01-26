@@ -25,6 +25,7 @@
   <div>Actions remaining: {{actions_left}}</div>
   <div>x: {{x}}</div>
   <div>i: {{i}}</div>
+  <!-- div>Draw pile: {{pluralize cards 'card'}} remaining</div -->
 </template>
 
 <template name="hand">
@@ -76,7 +77,7 @@
 {{#if cards}}
   <ul id="discards">
   {{#each cards}}
-    <li title="{{cardDescr this}}">{{this}}</li> 
+    <li title="{{descr}}">{{name}}</li> 
   {{/each}}
   </ul>
 {{else}}

@@ -4,18 +4,18 @@ Template.board.events
     Session.set('game_id', null)
     false
 
-Template.discards.cards = -> game().discards
+Template.discards.cards = ->
+  { name, descr: Cards[name].descr } for name in game().discard
 
-Template.status.x = -> game().x
-Template.status.i = -> game().i
-Template.status.goal = ->
-  if game().players[1] is Meteor.userId() then '≥ 5' else '≤ -5'
-Template.status.actions_left = -> game().actions_left
-Template.status.current = ->
-  g   = game()
-  res = username(g.cur_player)
-  res += ' (you)' if g.cur_player is Meteor.userId()
-  res
+_.extend Template.status,
+  x: -> game().x
+  i: -> game().i
+  cards: -> 0 # TODO: show counts of deck and other players' hands
+  goal: -> if game().players[1] is Meteor.userId() then '≥ 5' else '≤ -5'
+  actions_left: -> game().actions_left
+  current: ->
+    uid = game().cur_player
+    "#{username uid}#{if uid is Meteor.userId() then ' (you)' else ''}"
 
 Template.hand.cards = ->
   for name, i in hand()

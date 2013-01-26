@@ -11,9 +11,10 @@ Meteor.publish 'players', ->
 Meteor.publish 'requests', ->
   Requests.find { '$or': [ { to: @userId }, { from: @userId } ] }
 
-updateGame = (gid, who, what, changes) ->
+updateGame = (gid, logs, changes) ->
   now = new Date
-  (changes.$push ||= {}).log = { who, what, when: now } if what?
+  (changes.$pushAll ||= {}).log =
+    _.extend log, when: now for log in _.flatten([logs]) when log.what?
   (changes.$set ||= {}).updated_at = now
   Games.update gid, changes
 
@@ -23,14 +24,15 @@ Meteor.startup ->
     changed: (g, i, old) ->
       now  = new Date
       set  = {}
-      who  = null
-      what = null
+      logs = []
 
       # is the game over? 
       if Math.abs(g.x) >= 5
-        who  = g.players[if g.x > 0 then 1 else 0]
-        what = "won the game with x = #{g.x}"
+        logs.push
+          who:  (who = g.players[if g.x > 0 then 1 else 0])
+          what: "won the game with x = #{g.x}"
         _.extend set, finished_at: now, winner: who
+
       # game not over
       else
         # is the draw pile empty?
@@ -39,21 +41,22 @@ Meteor.startup ->
           if g.discard.length is 0
             throw new Meteor.Error('empty deck and discard!')
 
-          what = 'draw pile was refreshed'
+          logs.push what: 'draw pile was refreshed'
           _.extend set,
             deck:       _.shuffle(g.discard)
             discard:    []
             deck_count: g.discard.length
+
         # is the player's turn over?
         if g.actions_left is 0 and old.actions_left > 0
           # TODO: handle thread execution & advancement
 
-          who  = g.players[if g.cur_player is g.players[0] then 1 else 0]
-          what = 'began turn'
+          who = g.players[if g.cur_player is g.players[0] then 1 else 0]
+          logs.push { who, what: 'began turn' }
           _.extend set, actions_left: 2, cur_player: who
 
       unless _.isEmpty set
-        updateGame g._id, who, what, $set: set
+        updateGame g._id, logs, $set: set
 
 Meteor.methods
   startGame: (request_id) ->
@@ -116,7 +119,7 @@ Meteor.methods
       throw new Meteor.Error('your hand is full')
 
     # remove card from deck and decrement actions
-    updateGame gid, @userId, 'drew a card',
+    updateGame gid, { who: @userId, what: 'drew a card' },
       $pop: { deck: -1 }
       $inc: _.object [
         [ 'actions_left',          -1 ]
@@ -143,7 +146,7 @@ Meteor.methods
     Hands.update h._id, $set: { cards: h.cards }
 
     # add card to discard pile and decrement actions
-    updateGame gid, @userId, "discarded card: #{card}",
+    updateGame gid, { who: @userId, what: "discarded card: #{card}" },
       $push: { discard: card }
       $inc:  _.object [
         [ 'actions_left',           -1 ]

@@ -22,10 +22,11 @@
 <template name="status">
   <div>Your goal: x {{goal}}</div>
   <div>Current player: {{current}}</div>
+  <div>Other player's hand: {{pluralize other_count 'card'}}</div>
   <div>Actions remaining: {{actions_left}}</div>
   <div>x: {{x}}</div>
   <div>i: {{i}}</div>
-  <!-- div>Draw pile: {{pluralize cards 'card'}} remaining</div -->
+  <div>Draw pile: {{pluralize deck_count 'card'}} remaining</div>
 </template>
 
 <template name="hand">

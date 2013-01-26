@@ -10,9 +10,12 @@ Template.discards.cards = ->
 _.extend Template.status,
   x: -> game().x
   i: -> game().i
-  cards: -> 0 # TODO: show counts of deck and other players' hands
   goal: -> if game().players[1] is Meteor.userId() then '≥ 5' else '≤ -5'
   actions_left: -> game().actions_left
+  other_count: ->
+    g = game()
+    g.hand_counts[_.without(g.players, Meteor.userId())[0]]
+  deck_count: -> game().deck_count
   current: ->
     uid = game().cur_player
     "#{username uid}#{if uid is Meteor.userId() then ' (you)' else ''}"

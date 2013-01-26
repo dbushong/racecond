@@ -40,7 +40,10 @@ Meteor.startup ->
             throw new Meteor.Error('empty deck and discard!')
 
           what = 'draw pile was refreshed'
-          _.extend set, deck: _.shuffle(g.discard), discard: []
+          _.extend set,
+            deck:       _.shuffle(g.discard)
+            discard:    []
+            deck_count: g.discard.length
         # is the player's turn over?
         if g.actions_left is 0 and old.actions_left > 0
           # TODO: handle thread execution & advancement
@@ -66,6 +69,9 @@ Meteor.methods
       deck.push(name) for i in [1..(count ? 1)]
     deck    = _.shuffle deck
     hands   = [4, 5].map (n) -> deck.splice(0, n)
+    hcounts = {}
+    hcounts[players[0]] = 4
+    hcounts[players[1]] = 5
     now     = new Date
 
     gid = Games.insert
@@ -80,6 +86,8 @@ Meteor.methods
       created_at:   now
       updated_at:   now
       deck:         deck
+      deck_count:   deck.length
+      hand_counts:  hcounts
       request_id:   request_id
       log:          [
         { when: now, who: null,       what: 'game started'           }
@@ -110,7 +118,11 @@ Meteor.methods
     # remove card from deck and decrement actions
     updateGame gid, @userId, 'drew a card',
       $pop: { deck: -1 }
-      $inc: { actions_left: -1 }
+      $inc: _.object [
+        [ 'actions_left',          -1 ]
+        [ 'deck_count',            -1 ]
+        [ "hand_counts.#{@userId}", 1 ]
+      ]
 
     # add card to hand
     Hands.update h._id, $push: { cards: g.deck[0] }
@@ -133,4 +145,7 @@ Meteor.methods
     # add card to discard pile and decrement actions
     updateGame gid, @userId, "discarded card: #{card}",
       $push: { discard: card }
-      $inc:  { actions_left: -1 }
+      $inc:  _.object [
+        [ 'actions_left',           -1 ]
+        [ "hand_counts.#{@userId}", -1 ]
+      ]

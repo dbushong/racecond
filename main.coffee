@@ -1,5 +1,5 @@
 ###
-{ players:      [ '<_id of negative player>', '<... positive player>' ]
+{ players:      [ '<uid of negative player>', '<uid of positive player>' ]
 , x:            -5..5
 , i:            -5..5
 , cur_player:   <user id>
@@ -12,6 +12,8 @@
 , updated_at:   Date
 , finished_at:  null|Date
 , deck:         [ 'card_id', ... ] // kept secret from players
+, deck_count:   Number
+, hand_counts:  { <uid>: Number, <uid>: Number }
 , log:          [ { who: null|<uid>, what: 'msg', when: Date }, ... ]
 }
 ###

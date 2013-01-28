@@ -23,9 +23,18 @@ isPlayable = (card) ->
 
   switch card.name
     when 'else', 'break'
-      return false if g.program.length is 0
-      tree = AST g.program
-      # TODO: more work
+      ptr = AST g.program
+      tgt = if card.name is 'else' then /^if / else /^while /
+      while ptr = ptr.seq?[ptr.seq.length-1]
+        # if we're already inside an else, no can do
+        return false if card.name is 'else' and ptr.instr is 'else'
+        # if we found our target parent, we're good
+        return true  if tgt.test ptr.instr
+      # never found parent?  fail
+      false
+    when 'move card', 'delete card'
+      # as long as there's an instruction not currently pointed to by a thread
+      _.some g.program, (e,i) -> i not in g.threads
     else
       true
 

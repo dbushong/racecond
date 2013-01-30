@@ -183,9 +183,7 @@ Meteor.methods
     unless 0 <= i < h.cards.length
       throw new Meteor.Error("invalid hand index: #{i}")
 
-    most_args = _.omit args, 'indent'
-    plays     = validPlays g, h.cards, i
-    unless _.some(plays, (play) ->_.isEqual play, most_args)
+    unless _.findWhere(validPlays(g, h.cards, i), args)
       throw new Meteor.Error('not a valid play')
 
     card = h.cards.splice(i, 1)[0]
@@ -195,12 +193,6 @@ Meteor.methods
     unless card.actions
       # remove card from hand
       removeCard()
-
-      # validate requested indentation level
-      [min_indent, max_indent] = validIndentRange(g.program)
-      unless min_indent <= args.indent <= max_indent
-        throw new Meteor.Error(
-          "indentation must be #{min_indent}-#{max_indent}")
 
       # add card to program, decrement action count, decrement hand count
       updateGame gid, { who: @userId, what: "added instruction: #{card}" },

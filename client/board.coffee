@@ -1,16 +1,34 @@
-playInstructionCard = (pos) ->
+playInstructionCard = (pos, insert=null) ->
   g = game()
-  [min_indent, max_indent] = validIndentRange g.program
-  indent = min_indent
+  h = hand()
 
-  # if there's actually a range to choose from, let the user pick
-  if min_indent isnt max_indent
-    loop
-      indent = Number(prompt(
-        "Select relative indent level from #{min_indent} to #{max_indent}:"))
-      break if indent? and min_indent <= indent <= max_indent
+  plays = _.filter validPlays(g, h, pos), (play) ->
+    play.position is (insert ? g.program.length)
 
-  Meteor.call 'playCard', g._id, pos, { indent }, (err) ->
+  # shouldn't really happen
+  unless plays.length
+    console.error "no valid plays for hand card #{pos}"
+    return
+
+  play =
+    if plays.length is 1
+      plays[0]
+    else
+      indents = _.pluck(plays, 'indent')
+      indents.sort (a, b) -> a - b
+
+      # if there's actually a range to choose from, let the user pick
+      loop
+        indent = Number(prompt(
+          "Select relative indent level (#{orList indents})"))
+        break if indent? and indent not in indents
+
+      _.findWhere plays, { indent }
+
+  # special mode when called from playSpecialActionCard()
+  return play.indent if insert?
+
+  Meteor.call 'playCard', g._id, pos, play, (err) ->
     handleErr 'play instruction card', err
 
 playSpecialActionCard = (pos, card) ->
@@ -47,7 +65,7 @@ playSpecialActionCard = (pos, card) ->
         ns = (n+1 for n in choices)
         p = prompt "Choose the nth card from your hand which is an instruction: #{ns.join(' or ')}"
         return unless p?
-        args.position = p-1
+        args.hand_instruction = p-1
       when 'hand_cards'
         cs = prompt "Choose one or more card numbers from your hand to discard, separated by commas"
         return unless cs?
@@ -59,22 +77,12 @@ playSpecialActionCard = (pos, card) ->
       else
         throw new Meteor.Error('wtf arg')
 
-    plays = _.filter plays, (play) ->
-      _.isEqual _.pick(play, _.keys(args)...), args
-
-    unless plays.length
+    unless _.findWhere(plays, args)
       alert 'No valid plays for those options'
       return
 
   if args.position?
-    [min_indent, max_indent] = validIndentRange g.program, args.position
-    indent = min_indent
-
-    # if there's actually a range to choose from, let the user pick
-    if min_indent isnt max_indent
-      args.indent = prompt(
-        "Select relative indent level from #{min_indent} to #{max_indent}:")
-      return unless args.indent? and min_indent <= args.indent <= max_indent
+    args.indent = playInstructionCard(args.hand_instruction, args.position)
 
   Meteor.call 'playCard', g._id, pos, args, (err) ->
     handleErr 'play special action card', err

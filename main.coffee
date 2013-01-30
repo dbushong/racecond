@@ -36,22 +36,24 @@ TODO: time these out
 ###
 Requests = new Meteor.Collection 'requests'
 
-# TODO: implement these two
-validIfWhile = (g, h, pos, combo) ->
-  false
+traverseAST = (prog, func) ->
+  dfs = (ptr) ->
+    func ptr if ptr.instr
+    dfs kid for kid in (ptr.seq or [])
+    null
+  try dfs AST(prog)[0] catch e then e
 
-validBreakElse = (g, h, pos, combo) ->
-  return false
-  c   = h[pos]
-  ptr = AST g.program
-  tgt = if c is 'else' then /^if / else /^while /
-  while ptr = ptr.seq?[ptr.seq.length-1]
-    # if we're already inside an else, no can do
-    return false if card.name is 'else' and ptr.instr is 'else'
-    # if we found our target parent, we're good
-    return true  if tgt.test ptr.instr
-  # never found parent?  fail
-  false
+# elses can be inserted only at the same level and immediately following a
+# preceding if, as long as one doesn't already exist
+validElse = (g, h, pos) ->
+  traverseAST g.program, (ptr) ->
+    if /^if /.test(ptr.instr)
+      seq = ptr.parent.seq
+      i = _.indexOf(seq, ptr)
+      # if this if clause is the last clause and the pos is at the end
+      if seq.length is i+1 and pos is g.program.length
+        throw true
+
 
 Cards =
   'i = 1':
@@ -63,11 +65,14 @@ Cards =
     descr: 'FIXME'
   'break':
     descr: 'FIXME'
-    valid: validBreakElse
+    valid: (g, h, pos, combo) -> # you can put a break anywhere inside a while, period
+      traverseAST g.program, (ptr) ->
+        if /^while /.test(ptr.instr) and ptr.end_pos >= (pos-1)
+          throw true
   'else':
     descr: 'FIXME'
     indenter: true
-    valid: validBreakElse
+    valid: validElse
   'advance all threads':
     descr: 'FIXME'
     actions: 1
@@ -106,12 +111,10 @@ Cards =
     descr: 'FIXME'
     copies: 2
     indenter: true
-    valid: validIfWhile
   'if (i > 0)':
     descr: 'FIXME'
     copies: 2
     indenter: true
-    valid: validIfWhile
   'insert card':
     descr: 'FIXME'
     copies: 3
@@ -165,23 +168,18 @@ Cards =
   'while (i < 0)':
     descr: 'FIXME'
     indenter: true
-    valid: validIfWhile
   'while (i < 0)':
     descr: 'FIXME'
     indenter: true
-    valid: validIfWhile
   'while (i < 2)':
     descr: 'FIXME'
     indenter: true
-    valid: validIfWhile
   'while (i > -2)':
     descr: 'FIXME'
     indenter: true
-    valid: validIfWhile
   'while (i > 0)':
     descr: 'FIXME'
     indenter: true
-    valid: validIfWhile
   'x = x + i':
     descr: 'FIXME'
     count: 4
@@ -218,17 +216,25 @@ validIndentRange = (prog, pos=prog.length) ->
 
 AST = (prog) ->
   tree = parent = { seq: [] }
+  max_depth = depth = 0
 
   for [ instr, shift ], pos in prog
     if shift > 0 # really, 1
+      max_depth = Math.max(++depth, max_depth)
       parent = parent.seq[parent.seq.length-1]
       parent.seq = []
     else if shift < 0 # exdenting 
+      depth += shift
       parent = parent.parent for i in [shift...0]
 
-    parent.seq.push { instr, pos, parent }
+    ptr = entry = { instr, pos, parent }
+    parent.seq.push entry
 
-  tree
+    # also update end_pos all the way up
+    while (ptr = ptr.parent) and ptr.instr
+      ptr.end_pos = pos
+
+  [tree, max_depth]
 
 cartesianProduct = (sets) ->
   _.reduce sets, ((mtrx, vals) ->
@@ -253,7 +259,7 @@ cartesianProduct = (sets) ->
 # , { hand_instruction: 3, position: 7 }
 # ]
 validPlays = (g, h, pos) ->
-  tree = AST g.program
+  [tree, max_depth] = AST g.program
 
   card = Cards[h[pos]]
 
@@ -271,6 +277,7 @@ validPlays = (g, h, pos) ->
         when 'hand_instruction' then (c for c in h when !Cards[c].actions)
         when 'hand_cards' then (if h.length > 1 then ['ok'] else [])
         when 'set_i' then [-2..2]
+        when 'indent' then [-max_depth..1]
         else throw new Meteor.Error('wtf bad arg')
     
     options = (([args[i], val] for val in opts) for opts, i in options)

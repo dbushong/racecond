@@ -13,30 +13,71 @@ playInstructionCard = (pos) ->
   Meteor.call 'playCard', g._id, pos, { indent }, (err) ->
     handleErr 'play instruction card', err
 
-playSpecialActionCard = (card, pos) ->
-  alert "FIXME: special action card playing not yet implemented"
+playSpecialActionCard = (pos, card) ->
+  g     = game()
+  h     = hand()
+  args  = {}
+  plays = validPlays g, h, pos
 
-isPlayable = (card) ->
-  g = game()
+  for arg in (card.args or [])
+    choices = _.uniq(_.pluck plays, arg)
 
-  return false if (card.actions or 1) > g.actions_left
+    if choices.length is 1
+      args[arg] = choices[0]
+      continue
 
-  switch card.name
-    when 'else', 'break'
-      ptr = AST g.program
-      tgt = if card.name is 'else' then /^if / else /^while /
-      while ptr = ptr.seq?[ptr.seq.length-1]
-        # if we're already inside an else, no can do
-        return false if card.name is 'else' and ptr.instr is 'else'
-        # if we found our target parent, we're good
-        return true  if tgt.test ptr.instr
-      # never found parent?  fail
-      false
-    when 'move card', 'delete card'
-      # as long as there's an instruction not currently pointed to by a thread
-      _.some g.program, (e,i) -> i not in g.threads
-    else
-      true
+    switch arg
+      when 'instruction'
+        ns = (n+1 for n in choices)
+        instr = prompt(
+          "Choose an instruction # to apply this to (#{ns.join(',')}):")
+        return unless instr?
+        args.instruction = instr - 1
+      when 'thread'
+        ns = (n+1 for n in choices)
+        t = prompt "Choose a thread to apply to: #{ns.join(' or ')}"
+        return unless t?
+        args.thread = t-1
+      when 'position'
+        ns = (n+1 for n in choices)
+        p = prompt "Choose a position before which to place card: (#{ns.join(',')})"
+        return unless p?
+        args.position = p-1
+      when 'hand_instruction'
+        ns = (n+1 for n in choices)
+        p = prompt "Choose the nth card from your hand which is an instruction: #{ns.join(' or ')}"
+        return unless p?
+        args.position = p-1
+      when 'hand_cards'
+        cs = prompt "Choose one or more card numbers from your hand to discard, separated by commas"
+        return unless cs?
+        args.hand_cards = (Number(n)-1 for n in cs.split(/\s*,\s*/))
+      when 'set_i'
+        i = prompt "Choose value to set i to (-2..2)"
+        return unless i?
+        args.set_i = i
+      else
+        throw new Meteor.Error('wtf arg')
+
+    plays = _.filter plays, (play) ->
+      _.isEqual _.pick(play, _.keys(args)...), args
+
+    unless plays.length
+      alert 'No valid plays for those options'
+      return
+
+  if args.position?
+    [min_indent, max_indent] = validIndentRange g.program, args.position
+    indent = min_indent
+
+    # if there's actually a range to choose from, let the user pick
+    if min_indent isnt max_indent
+      args.indent = prompt(
+        "Select relative indent level from #{min_indent} to #{max_indent}:")
+      return unless args.indent? and min_indent <= args.indent <= max_indent
+
+  Meteor.call 'playCard', g._id, pos, args, (err) ->
+    handleErr 'play special action card', err
 
 Template.board.show = -> !!game()
 Template.board.events
@@ -66,14 +107,18 @@ _.extend Template.status,
     "#{username uid}#{if uid is Meteor.userId() then ' (you)' else ''}"
 
 Template.hand.cards = ->
-  for name, i in hand()
-    card = Cards[name]
+  g = game()
+  h = hand()
+  for name, i in h
+    plays = validPlays g, h, i
+    card  = Cards[name]
     {
-    name:     "#{name}#{if card.actions is 2 then ' -- 2 actions' else ''}"
+    name:     "#{if card.actions then name.toUpperCase() else name}#{if card.actions is 2 then ' -- 2 actions' else ''}"
     descr:    card.descr
     index:    i
-    playable: isCurrentPlayer() and isPlayable(card)
+    playable: isCurrentPlayer() and plays.length > 0
     }
+
 Template.hand.currentPlayer = -> isCurrentPlayer()
 Template.hand.canDrawCard = -> isCurrentPlayer() and hand().length < 5
 Template.hand.events

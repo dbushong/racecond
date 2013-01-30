@@ -180,14 +180,16 @@ Meteor.methods
     if g.cur_player isnt @userId
       throw new Meteor.Error('not your turn')
 
-    if i < 0 or i >= h.cards.length
+    unless 0 <= i < h.cards.length
       throw new Meteor.Error("invalid hand index: #{i}")
+
+    most_args = _.omit args, 'indent'
+    plays     = validPlays g, h.cards, i
+    unless _.some(plays, (play) ->_.isEqual play, most_args)
+      throw new Meteor.Error('not a valid play')
 
     card = h.cards.splice(i, 1)[0]
     removeCard = -> Hands.update h._id, $set: { cards: h.cards }
-
-    if card.actions > g.actions_left
-      throw new Meteor.Error("you don't have enough actions to play that")
 
     # if it's an instruction, let's stick it on the end
     unless card.actions
@@ -213,7 +215,7 @@ Meteor.methods
     # ok, it's a special action.  switch of dooooom
     update = {}
     logs   = []
-    switch card
+    switch card.name
       when 'trade hands'
         other_player = _.without(g.players, @userId)[0]
         other_hand   = Hands.findOne game_id: gid, user_id: other_player
@@ -230,3 +232,6 @@ Meteor.methods
         logs.push who: @userId, what: 'traded hands'
       else
         throw new Meteor.Error("card #{card} not yet implemented")
+        removeCard()
+
+    updateGame gid, logs, update unless _.isEmpty update

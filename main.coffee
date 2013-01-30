@@ -36,6 +36,23 @@ TODO: time these out
 ###
 Requests = new Meteor.Collection 'requests'
 
+# TODO: implement these two
+validIfWhile = (g, h, pos, combo) ->
+  false
+
+validBreakElse = (g, h, pos, combo) ->
+  return false
+  c   = h[pos]
+  ptr = AST g.program
+  tgt = if c is 'else' then /^if / else /^while /
+  while ptr = ptr.seq?[ptr.seq.length-1]
+    # if we're already inside an else, no can do
+    return false if card.name is 'else' and ptr.instr is 'else'
+    # if we found our target parent, we're good
+    return true  if tgt.test ptr.instr
+  # never found parent?  fail
+  false
+
 Cards =
   'i = 1':
     descr: 'FIXME'
@@ -46,9 +63,11 @@ Cards =
     descr: 'FIXME'
   'break':
     descr: 'FIXME'
+    valid: validBreakElse
   'else':
     descr: 'FIXME'
     indenter: true
+    valid: validBreakElse
   'advance all threads':
     descr: 'FIXME'
     actions: 1
@@ -56,14 +75,25 @@ Cards =
     descr: 'FIXME'
     copies: 3
     actions: 1
+    args: ['instruction']
+    valid: (g, h, pos, { instruction }) ->
+      # FIXME: also needs to make sure you're not deleting an if/while
+      # with a dependent else/break in it
+      0 <= instruction < g.program.length and instruction not in g.threads
   'fast forward':
     descr: 'FIXME'
     copies: 2
     actions: 1
+    args: ['thread']
+    valid: (g, h, pos, { thread }) -> thread in g.threads
   'move card':
     descr: 'FIXME'
     copies: 3
     actions: 2
+    args: ['instruction', 'position']
+    valid: (g, h, pos, { instruction, position }) ->
+      # FIXME: implement validity check for move card without looping
+      false
   'i = -i':
     descr: 'FIXME'
   'i = abs(i)':
@@ -76,33 +106,56 @@ Cards =
     descr: 'FIXME'
     copies: 2
     indenter: true
+    valid: validIfWhile
   'if (i > 0)':
     descr: 'FIXME'
     copies: 2
     indenter: true
+    valid: validIfWhile
   'insert card':
     descr: 'FIXME'
     copies: 3
     actions: 1
+    args: ['hand_instruction', 'position']
+    valid: (g, h, pos, { hand_instruction, position }) ->
+      # FIXME: also needs to validate that's an OK place to stick the card,
+      # without recursively calling validPlays() on the whole hand
+      (c = Cards[h[hand_instruction]]) and not c.actions? and
+        0 <= position <= g.program.length
   'kill thread':
     descr: 'FIXME'
     actions: 1
+    args: ['thread']
+    valid: (g, h, pos, { thread }) -> thread in g.threads
   'new hand':
     descr: 'FIXME'
     actions: 1
+    args: ['hand_cards']
+    valid: (g, h, pos, { hand_cards }) ->
+      _.every hand_cards, (c) -> 0 <= c < h.length and c isnt pos
   'new thread (2)':
     descr: 'FIXME'
     actions: 2
+    args: ['instruction']
+    valid: (g, h, pos, { instruction }) -> 0 <= instruction < g.program.length
   'new thread (3)':
     descr: 'FIXME'
     actions: 2
+    args: ['instruction']
+    valid: (g, h, pos, { instruction }) -> 0 <= instruction < g.program.length
   'set i':
     descr: 'FIXME'
     actions: 1
+    args: ['set_i']
+    valid: (g, h, pos, { set_i }) -> -2 <= set_i <= 2
   'set next':
     descr: 'FIXME'
     actions: 2
     count: 2
+    args: ['thread', 'instruction']
+    valid: (g, h, pos, { thread, instruction }) ->
+      thread in g.threads and 0 <= instruction < g.program.length
+    advance: false
   'skip all threads':
     descr: 'FIXME'
     actions: 1
@@ -112,18 +165,23 @@ Cards =
   'while (i < 0)':
     descr: 'FIXME'
     indenter: true
+    valid: validIfWhile
   'while (i < 0)':
     descr: 'FIXME'
     indenter: true
+    valid: validIfWhile
   'while (i < 2)':
     descr: 'FIXME'
     indenter: true
+    valid: validIfWhile
   'while (i > -2)':
     descr: 'FIXME'
     indenter: true
+    valid: validIfWhile
   'while (i > 0)':
     descr: 'FIXME'
     indenter: true
+    valid: validIfWhile
   'x = x + i':
     descr: 'FIXME'
     count: 4
@@ -159,13 +217,64 @@ validIndentRange = (prog, pos=prog.length) ->
   [min_indent, max_indent]
 
 AST = (prog) ->
-  tree = ptr = { seq: [] }
-  for [ instr, shift ] in prog
-    if shift > 0 # really, 1
-      ptr = ptr.seq[ptr.seq.length-1]
-      ptr.seq = []
-    else if shift < 0 # exdenting 
-      ptr = ptr.parent for i in [shift...0]
+  tree = parent = { seq: [] }
 
-    ptr.seq.push { instr, parent: ptr }
+  for [ instr, shift ], pos in prog
+    if shift > 0 # really, 1
+      parent = parent.seq[parent.seq.length-1]
+      parent.seq = []
+    else if shift < 0 # exdenting 
+      parent = parent.parent for i in [shift...0]
+
+    parent.seq.push { instr, pos, parent }
+
   tree
+
+cartesianProduct = (sets) ->
+  _.reduce sets, ((mtrx, vals) ->
+    _.reduce vals, ((array, val) ->
+      array.concat(_.map mtrx, (row) -> row.concat([val]))
+    ), []
+  ), [[]]
+
+# takes: game object, array of cards (hand) as argument, and index of card
+# to review
+#
+# returns: array of valid plays
+#
+# instruction cards will each have a array with a { position: N } object
+# per valid place that instruction may be inserted
+#
+# action cards will have a single empty object if they are playable with no
+# options, and an array of objects enumerating all valid combinations of 
+# options otherwise, e.g. for INSERT CARD:
+# [ { hand_instruction: 2, position: 7 }
+# , { hand_instruction: 2, position: 8 }
+# , { hand_instruction: 3, position: 7 }
+# ]
+validPlays = (g, h, pos) ->
+  tree = AST g.program
+
+  card = Cards[h[pos]]
+
+  # instructions have an implicit single argument of "position"
+  args = if card.actions then card.args else ['position']
+
+  if card.actions > g.actions_left
+    []
+  else if args
+    options = _.map args, (arg) ->
+      switch arg
+        when 'instruction' then [0...g.program.length]
+        when 'thread' then (i for t, i in g.threads when t?)
+        when 'position' then [0..g.program.length]
+        when 'hand_instruction' then (c for c in h when !Cards[c].actions)
+        when 'hand_cards' then (if h.length > 1 then ['ok'] else [])
+        when 'set_i' then [-2..2]
+        else throw new Meteor.Error('wtf bad arg')
+    
+    options = (([args[i], val] for val in opts) for opts, i in options)
+    _.filter _.map(cartesianProduct(options), _.object), (combo) ->
+      not card.valid or card.valid g, h, pos, combo
+  else
+    [{}]

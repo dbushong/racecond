@@ -112,17 +112,17 @@ _.extend Template.status,
     uid = game().cur_player
     "#{username uid}#{if uid is Meteor.userId() then ' (you)' else ''}"
 
+Template.hand.haveCards = -> !!hand().length
 Template.hand.cards = ->
   g = game()
   h = hand()
   for name, i in h
-    plays = validPlays g, h, i
     card  = Cards[name]
     {
     name:     "#{if card.actions then name.toUpperCase() else name}#{if card.actions is 2 then ' -- 2 actions' else ''}"
     descr:    card.descr
     index:    i
-    playable: isCurrentPlayer() and plays.length > 0
+    playable: isCurrentPlayer() and validPlays(g, h, i).length > 0
     }
 
 Template.hand.currentPlayer = -> isCurrentPlayer()

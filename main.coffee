@@ -58,15 +58,18 @@ Cards =
     descr: 'FIXME'
     indenter: true
     valid: (g, h, hpos, {position, indent}) ->
-      return false unless validIndent g.program, { position, indent }
-      # else is fine immediately after (at same level) as if
+      return false unless validIndent g.program, {position, indent}
       { all } = AST g.program
       !!_.find all, (entry) ->
-        if /^if /.test(entry.instr) and entry.seq
-          if (next = entry.parent.seq[_.indexOf(entry.parent.seq, entry) + 1])
-            next.position is position and next.instr isnt 'else'
-          else
-            position is all.length
+        # we need to be trying into insert into
+        # * an "if" clause
+        # * not immediately after the "if"
+        # * the "if" clause can't already have an "else" after it
+        # * at the same indentation as the "if" clause
+        /^if /.test(entry.instr) and
+          entry.pos + 2 <= position <= entry.end_pos + 1 and
+          all[entry.end_pos+1]?.instr isnt 'else' and
+          all[entry.end_pos].depth + indent is entry.depth
   'advance all threads':
     descr: 'FIXME'
     actions: 1
@@ -189,7 +192,8 @@ Cards =
   'x = x + 1':
     descr: 'FIXME'
     count: 2
-card.name = name for name, card of Cards # for convenience
+do -> # scope card & name
+  card.name = name for name, card of Cards # for convenience
 
 game = (gid = Session.get('game_id')) -> Games.findOne gid
 
@@ -263,7 +267,7 @@ validPlays = (g, h, hpos) ->
 
   if card.actions > g.actions_left
     []
-  else if args
+  else
     options = _.map args, (arg) ->
       switch arg
         when 'instruction' then [0...g.program.length]
@@ -282,8 +286,6 @@ validPlays = (g, h, hpos) ->
         card.valid g, h, hpos, combo
       else # instruction!
         validIndent g.program, combo
-  else
-    [{}]
 
 # can remove when meteor underscore -> 1.4.4
 _.findWhere ?= (obj, attrs) ->

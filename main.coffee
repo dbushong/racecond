@@ -47,15 +47,18 @@ Cards =
   'break':
     descr: 'FIXME'
     valid: (g, h, hpos, {position, indent}) ->
+      return false unless validIndent g.program, {position, indent}
       # break is fine anywhere inside a while clause
       { all } = AST g.program
       !!_.find all, (entry) ->
-        /^while /.test(entry.instr) and entry.end_pos+1 >= position and
-          (all[position-1].depth + indent) > entry.depth
+        /^while /.test(entry.instr) and entry.pos < position and
+          entry.end_pos+1 >= position and
+            (all[position-1]?.depth + indent) > entry.depth
   'else':
     descr: 'FIXME'
     indenter: true
     valid: (g, h, hpos, {position, indent}) ->
+      return false unless validIndent g.program, { position, indent }
       # else is fine immediately after (at same level) as if
       { all } = AST g.program
       !!_.find all, (entry) ->
@@ -190,23 +193,18 @@ card.name = name for name, card of Cards # for convenience
 
 game = (gid = Session.get('game_id')) -> Games.findOne gid
 
-validIndentRange = (prog, pos=prog.length) ->
-  # validate position
-  unless 0 <= pos <= prog.length
-    throw new Meteor.Error('invalid pos specified')
-
-  # starting (relative) allowed indentation level
+validIndent = (prog, { position, indent }) ->
   min_indent = max_indent = 0
 
-  if prog.length > 0 and pos > 0
+  if prog.length > 0 and position > 0
     # if preceding card is indenter, we have to indent by 1
-    if Cards[prog[pos-1][0]].indenter
+    if Cards[prog[position-1][0]].indenter
       max_indent = min_indent = 1
     # otherwise, check to see how deep we can exdent
     else
-      min_indent -= indent for [card, indent] in prog[0...pos]
+      min_indent -= indent for [card, indent] in prog[0...position]
 
-  [min_indent..max_indent]
+  min_indent <= indent <= max_indent
 
 AST = (prog) ->
   parent = { seq: [] }
@@ -283,7 +281,7 @@ validPlays = (g, h, hpos) ->
       if card.valid
         card.valid g, h, hpos, combo
       else # instruction!
-        combo.indent in validIndentRange(g.program, combo.position)
+        validIndent g.program, combo
   else
     [{}]
 

@@ -132,8 +132,10 @@ Template.hand.events
     pos  = e.target.dataset.index
     card = Cards[hand()[pos]]
     if card.actions
+      console.log "playing special action card #{card.name}"
       playSpecialActionCard pos, card
     else
+      console.log "playing instruction card #{card.name}"
       playInstructionCard pos
     false
   'click a.discard-card': (e) ->

@@ -154,6 +154,9 @@ Template.log.entries = ->
   for entry in game().log
     "#{entry.when}#{if entry.who? then " #{username entry.who}" else ''} #{entry.what}"
 
+Template.program.hungThreads = ->
+  g = game()
+  t+1 for p,t in g.threads when p is g.program.length
 Template.program.entries = ->
   g = game()
   indent = 0

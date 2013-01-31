@@ -18,6 +18,60 @@ updateGame = (gid, logs, changes) ->
   (changes.$set ||= {}).updated_at = now
   Games.update gid, changes
 
+executeThread = (g, thread, set, logs) ->
+  instr = g.threads[thread]
+  return if instr >= g.program.length
+
+  next   = instr + 1
+  {all}  = AST g.program
+  entry  = ptr = all[instr]
+  card   = Cards[entry.instr]
+  whiles = []
+
+  # find closest containing while instruction
+  while ptr = ptr.parent
+    whiles.push ptr if /^while /.test ptr.instr
+
+  if card.assign
+    _.extend set, card.assign(g)
+    logs.push what: "executed instruction: #{card.name}"
+  else if card.if
+    if card.if(g)
+      logs.push what: 'entered if clause'
+    else
+      logs.push what: 'skipped if clause'
+      next = entry.end_pos + 1
+  else if card.while
+    if card.while(g)
+      logs.push what: 'entered while loop'
+    else
+      logs.push what: 'skipped while loop'
+      next = entry.end_pos + 1
+  else if card.name is 'break'
+    logs.push what: 'broke out of while loop'
+    next = whiles.shift().end_pos + 1
+  else if card.name is 'else'
+    prv = entry.parent.seq[_.indexOf(entry.parent.seq, entry) - 1]
+    if Cards[entry.instr].if(g)
+      logs.push what: 'skipped else clause'
+      next = entry.end_pos + 1
+    else
+      logs.push what: 'entered else clause'
+  else
+    throw new Meteor.Error("unmatched card type #{card.name}")
+
+  # see if we need to loop back up in a while clause
+  for whl in whiles
+    if next - 1 is whl.end_pos
+      next = whl.pos
+      break
+
+  set["threads.#{thread}"] = next
+
+executeAllThreads = (g, set, logs) ->
+  for instr, thread in g.threads
+    executeThread g, thread, set, logs if instr?
+
 Meteor.startup ->
   # game logic triggered events
   o = Games.find(finished_at: null).observe
@@ -27,7 +81,7 @@ Meteor.startup ->
       logs = []
 
       # can we stop watching now?
-      if g.finished_at? and not old.finished_at?
+      if g.finished_at?
         o.stop()
         return
 
@@ -53,8 +107,9 @@ Meteor.startup ->
             deck_count: g.discard.length
 
         # is the player's turn over?
-        if g.actions_left is 0 and old.actions_left > 0
-          # TODO: handle thread execution & advancement
+        if g.actions_left is 0
+          console.log 'turn over!'
+          executeAllThreads(g, set, logs)
 
           who = g.players[if g.cur_player is g.players[0] then 1 else 0]
           logs.push { who, what: 'began turn' }

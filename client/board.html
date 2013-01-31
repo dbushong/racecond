@@ -9,7 +9,7 @@
   <h2>Program</h2>
   {{> program}}
 
-  <h2>Discards</h2> 
+  <h2>Discards</h2>
   {{> discards}}
 
   <h2>Log</h2>
@@ -49,9 +49,9 @@
       discard
     {{/if}}
     ]
-    </li> 
+    </li>
   {{/each}}
-  </ul> 
+  </ul>
 {{else}}
   Your hand is empty.
 {{/if}}
@@ -73,14 +73,21 @@
   {{/each}}
     </li>
 {{/each}}
-  </ol> 
+{{#if hungThreads}}
+    <li>
+  {{#each hungThreads}}
+      <b>← T{{this}}</b>
+  {{/each}}
+    </li>
+{{/if}}
+  </ol>
 </template>
 
 <template name="discards">
 {{#if cards}}
   <ul id="discards">
   {{#each cards}}
-    <li title="{{descr}}">{{name}}</li> 
+    <li title="{{descr}}">{{name}}</li>
   {{/each}}
   </ul>
 {{else}}
@@ -93,5 +100,5 @@
 {{#each entries}}
     <li>{{this}}</li>
 {{/each}}
-  </ul>   
+  </ul>
 </template>

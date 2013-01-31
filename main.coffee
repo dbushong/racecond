@@ -39,11 +39,14 @@ Requests = new Meteor.Collection 'requests'
 Cards =
   'i = 1':
     descr: 'FIXME'
+    assign: -> i: 1
   'i = -1':
     descr: 'FIXME'
     copies: 2
+    assign: -> i: -1
   'i = -abs(i)':
     descr: 'FIXME'
+    assign: (g) -> i: -Math.abs(g.i)
   'break':
     descr: 'FIXME'
     valid: (g, h, hpos, {position, indent}) ->
@@ -99,20 +102,26 @@ Cards =
       false
   'i = -i':
     descr: 'FIXME'
+    assign: (g) -> i: -g.i
   'i = abs(i)':
     descr: 'FIXME'
+    assign: (g) -> i: Math.abs(g.i)
   'i = min(i+1, 5)':
     descr: 'FIXME'
+    assign: (g) -> i: Math.min(g.i+1, 5)
   'i = max(i-1, -5)':
     descr: 'FIXME'
+    assign: (g) -> i: Math.max(g.i-1, 5)
   'if (i < 0)':
     descr: 'FIXME'
     copies: 2
     indenter: true
+    if: (g) -> g.i < 0
   'if (i > 0)':
     descr: 'FIXME'
     copies: 2
     indenter: true
+    if: (g) -> g.i > 0
   'insert card':
     descr: 'FIXME'
     copies: 3
@@ -168,30 +177,35 @@ Cards =
   'while (i < 0)':
     descr: 'FIXME'
     indenter: true
-  'while (i < 0)':
-    descr: 'FIXME'
-    indenter: true
-  'while (i < 2)':
-    descr: 'FIXME'
-    indenter: true
-  'while (i > -2)':
-    descr: 'FIXME'
-    indenter: true
+    while: (g) -> g.i < 0
   'while (i > 0)':
     descr: 'FIXME'
     indenter: true
+    while: (g) -> g.i > 0
+  'while (i < 2)':
+    descr: 'FIXME'
+    indenter: true
+    while: (g) -> g.i < 2
+  'while (i > -2)':
+    descr: 'FIXME'
+    indenter: true
+    while: (g) -> g.i > -2
   'x = x + i':
     descr: 'FIXME'
     count: 4
+    assign: (g) -> x: g.x + g.i
   'x = x - i':
     descr: 'FIXME'
     count: 4
+    assign: (g) -> x: g.x - g.i
   'x = x - 1':
     descr: 'FIXME'
     count: 2
+    assign: (g) -> x: g.x - 1
   'x = x + 1':
     descr: 'FIXME'
     count: 2
+    assign: (g) -> x: g.x + 1
 do -> # scope card & name
   card.name = name for name, card of Cards # for convenience
 

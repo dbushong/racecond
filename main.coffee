@@ -202,7 +202,7 @@ validIndent = (prog, { position, indent }) ->
       max_indent = min_indent = 1
     # otherwise, check to see how deep we can exdent
     else
-      min_indent -= indent for [card, indent] in prog[0...position]
+      min_indent -= shift for [card, shift] in prog[0...position]
 
   min_indent <= indent <= max_indent
 

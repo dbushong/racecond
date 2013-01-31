@@ -10,20 +10,17 @@ playInstructionCard = (pos, insert=null) ->
     console.error "no valid plays for hand card #{pos}"
     return
 
-  play =
-    if plays.length is 1
-      plays[0]
-    else
-      indents = _.pluck(plays, 'indent')
-      indents.sort (a, b) -> a - b
+  if plays.length is 1
+    play = plays[0]
+  else
+    indents = _.pluck(plays, 'indent')
+    indents.sort (a, b) -> a - b
 
-      # if there's actually a range to choose from, let the user pick
-      loop
-        indent = Number(prompt(
-          "Select relative indent level (#{orList indents})"))
-        break if indent? and indent not in indents
+    # if there's actually a range to choose from, let the user pick
+    indent = prompt "Select relative indent level (#{orList indents})"
+    return null unless indent? and (indent = Number(indent)) in indents
 
-      _.findWhere plays, { indent }
+    play = _.findWhere plays, { indent }
 
   # special mode when called from playSpecialActionCard()
   return play.indent if insert?
@@ -83,6 +80,7 @@ playSpecialActionCard = (pos, card) ->
 
   if args.position?
     args.indent = playInstructionCard(args.hand_instruction, args.position)
+    return unless args.indent?
 
   Meteor.call 'playCard', g._id, pos, args, (err) ->
     handleErr 'play special action card', err

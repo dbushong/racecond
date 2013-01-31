@@ -36,12 +36,6 @@ TODO: time these out
 ###
 Requests = new Meteor.Collection 'requests'
 
-# elses can be inserted only at the same level and immediately following a
-# preceding if, as long as one doesn't already exist
-validElse = (g, h, hpos) ->
-  for entry in AST(g.program).all
-    FIXME
-
 Cards =
   'i = 1':
     descr: 'FIXME'
@@ -73,6 +67,7 @@ Cards =
   'advance all threads':
     descr: 'FIXME'
     actions: 1
+    valid: -> true
   'delete card':
     descr: 'FIXME'
     copies: 3
@@ -92,7 +87,7 @@ Cards =
     descr: 'FIXME'
     copies: 3
     actions: 2
-    args: ['instruction', 'position']
+    args: ['instruction', 'position', 'indent']
     valid: (g, h, pos, { instruction, position }) ->
       # FIXME: implement validity check for move card without looping
       false
@@ -116,7 +111,7 @@ Cards =
     descr: 'FIXME'
     copies: 3
     actions: 1
-    args: ['hand_instruction', 'position']
+    args: ['hand_instruction', 'position', 'indent']
     valid: (g, h, pos, { hand_instruction, position }) ->
       # FIXME: also needs to validate that's an OK place to stick the card,
       # without recursively calling validPlays() on the whole hand
@@ -159,9 +154,11 @@ Cards =
   'skip all threads':
     descr: 'FIXME'
     actions: 1
+    valid: -> true
   'trade hands':
     descr: "Trade hands with your opponent.\nYou receive the cards that were in your opponent's hand, and your opponent receives the cards that were in your hand (not including this one)."
     actions: 1
+    valid: -> true
   'while (i < 0)':
     descr: 'FIXME'
     indenter: true
@@ -195,21 +192,21 @@ game = (gid = Session.get('game_id')) -> Games.findOne gid
 
 validIndentRange = (prog, pos=prog.length) ->
   # validate position
-  unless 1 <= pos <= prog.length
-    throw new Meteor.Error("invalid pos specified; must be 1-#{prog.length}")
+  unless 0 <= pos <= prog.length
+    throw new Meteor.Error('invalid pos specified')
 
   # starting (relative) allowed indentation level
   min_indent = max_indent = 0
 
-  if prog.length > 0
+  if prog.length > 0 and pos > 0
     # if preceding card is indenter, we have to indent by 1
     if Cards[prog[pos-1][0]].indenter
       max_indent = min_indent = 1
     # otherwise, check to see how deep we can exdent
     else
-      min_indent -= indent for [card, indent] in prog[0..pos-1]
+      min_indent -= indent for [card, indent] in prog[0...pos]
 
-  [min_indent, max_indent]
+  [min_indent..max_indent]
 
 AST = (prog) ->
   parent = { seq: [] }
@@ -263,8 +260,8 @@ validPlays = (g, h, hpos) ->
 
   card = Cards[h[hpos]]
 
-  # instructions have an implicit single argument of "position"
-  args = if card.actions then card.args else ['position']
+  # instructions have an implicit args set of "position" and "indent"
+  args = if card.actions then card.args else ['position', 'indent']
 
   if card.actions > g.actions_left
     []
@@ -281,7 +278,21 @@ validPlays = (g, h, hpos) ->
         else throw new Meteor.Error('wtf bad arg')
     
     options = (([args[i], val] for val in opts) for opts, i in options)
-    _.filter _.map(cartesianProduct(options), _.object), (combo) ->
-      not card.valid or card.valid g, h, hpos, combo
+    combos  = (_.object set for set in cartesianProduct(options))
+    _.filter combos, (combo) ->
+      if card.valid
+        card.valid g, h, hpos, combo
+      else # instruction!
+        combo.indent in validIndentRange(g.program, combo.position)
   else
     [{}]
+
+# can remove when meteor underscore -> 1.4.4
+_.findWhere ?= (obj, attrs) ->
+  if _.isEmpty(attrs)
+    null
+  else
+    _.find obj, (value) ->
+      for key of attrs
+        return false if attrs[key] isnt value[key]
+      true

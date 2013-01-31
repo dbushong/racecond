@@ -36,24 +36,11 @@ TODO: time these out
 ###
 Requests = new Meteor.Collection 'requests'
 
-traverseAST = (prog, func) ->
-  dfs = (ptr) ->
-    func ptr if ptr.instr
-    dfs kid for kid in (ptr.seq or [])
-    null
-  try dfs AST(prog)[0] catch e then e
-
 # elses can be inserted only at the same level and immediately following a
 # preceding if, as long as one doesn't already exist
-validElse = (g, h, pos) ->
-  traverseAST g.program, (ptr) ->
-    if /^if /.test(ptr.instr)
-      seq = ptr.parent.seq
-      i = _.indexOf(seq, ptr)
-      # if this if clause is the last clause and the pos is at the end
-      if seq.length is i+1 and pos is g.program.length
-        throw true
-
+validElse = (g, h, hpos) ->
+  for entry in AST(g.program).all
+    FIXME
 
 Cards =
   'i = 1':
@@ -65,14 +52,24 @@ Cards =
     descr: 'FIXME'
   'break':
     descr: 'FIXME'
-    valid: (g, h, pos, combo) -> # you can put a break anywhere inside a while, period
-      traverseAST g.program, (ptr) ->
-        if /^while /.test(ptr.instr) and ptr.end_pos >= (pos-1)
-          throw true
+    valid: (g, h, hpos, {position, indent}) ->
+      # break is fine anywhere inside a while clause
+      { all } = AST g.program
+      !!_.find all, (entry) ->
+        /^while /.test(entry.instr) and entry.end_pos+1 >= position and
+          (all[position-1].depth + indent) > entry.depth
   'else':
     descr: 'FIXME'
     indenter: true
-    valid: validElse
+    valid: (g, h, hpos, {position, indent}) ->
+      # else is fine immediately after (at same level) as if
+      { all } = AST g.program
+      !!_.find all, (entry) ->
+        if /^if /.test(entry.instr) and entry.seq
+          if (next = entry.parent.seq[_.indexOf(entry.parent.seq, entry) + 1])
+            next.position is position and next.instr isnt 'else'
+          else
+            position is all.length
   'advance all threads':
     descr: 'FIXME'
     actions: 1
@@ -215,26 +212,29 @@ validIndentRange = (prog, pos=prog.length) ->
   [min_indent, max_indent]
 
 AST = (prog) ->
-  tree = parent = { seq: [] }
+  parent = { seq: [] }
   max_depth = depth = 0
 
-  for [ instr, shift ], pos in prog
-    if shift > 0 # really, 1
-      max_depth = Math.max(++depth, max_depth)
-      parent = parent.seq[parent.seq.length-1]
-      parent.seq = []
-    else if shift < 0 # exdenting 
-      depth += shift
-      parent = parent.parent for i in [shift...0]
+  all =
+    for [ instr, shift ], pos in prog
+      if shift > 0 # really, 1
+        max_depth = Math.max(++depth, max_depth)
+        parent = parent.seq[parent.seq.length-1]
+        parent.seq = []
+      else if shift < 0 # exdenting 
+        depth += shift
+        parent = parent.parent for i in [shift...0]
 
-    ptr = entry = { instr, pos, parent }
-    parent.seq.push entry
+      ptr = entry = { instr, pos, parent, depth }
+      parent.seq.push entry
 
-    # also update end_pos all the way up
-    while (ptr = ptr.parent) and ptr.instr
-      ptr.end_pos = pos
+      # also update end_pos all the way up
+      while (ptr = ptr.parent) and ptr.instr
+        ptr.end_pos = pos
 
-  [tree, max_depth]
+      entry
+
+  { all, max_depth }
 
 cartesianProduct = (sets) ->
   _.reduce sets, ((mtrx, vals) ->
@@ -258,10 +258,10 @@ cartesianProduct = (sets) ->
 # , { hand_instruction: 2, position: 8 }
 # , { hand_instruction: 3, position: 7 }
 # ]
-validPlays = (g, h, pos) ->
-  [tree, max_depth] = AST g.program
+validPlays = (g, h, hpos) ->
+  { max_depth } = AST(g.program)
 
-  card = Cards[h[pos]]
+  card = Cards[h[hpos]]
 
   # instructions have an implicit single argument of "position"
   args = if card.actions then card.args else ['position']
@@ -282,6 +282,6 @@ validPlays = (g, h, pos) ->
     
     options = (([args[i], val] for val in opts) for opts, i in options)
     _.filter _.map(cartesianProduct(options), _.object), (combo) ->
-      not card.valid or card.valid g, h, pos, combo
+      not card.valid or card.valid g, h, hpos, combo
   else
     [{}]

@@ -183,10 +183,11 @@ Meteor.methods
     unless 0 <= i < h.cards.length
       throw new Meteor.Error("invalid hand index: #{i}")
 
-    unless _.findWhere(validPlays(g, h.cards, i), args)
+    plays = validPlays g, h.cards, i
+    unless _.isEqual(args, plays[0]) or _.findWhere(plays, args)
       throw new Meteor.Error('not a valid play')
 
-    card = h.cards.splice(i, 1)[0]
+    card = Cards[h.cards.splice(i, 1)[0]]
     removeCard = -> Hands.update h._id, $set: { cards: h.cards }
 
     # if it's an instruction, let's stick it on the end
@@ -195,8 +196,8 @@ Meteor.methods
       removeCard()
 
       # add card to program, decrement action count, decrement hand count
-      updateGame gid, { who: @userId, what: "added instruction: #{card}" },
-        $push: { program: [ card, args.indent ] }
+      updateGame gid, { who: @userId, what: "added instruction: #{card.name}" },
+        $push: { program: [ card.name, args.indent ] }
         $inc:  _.object [
           [ 'actions_left',           -1 ]
           [ "hand_counts.#{@userId}", -1 ]
@@ -223,7 +224,7 @@ Meteor.methods
         
         logs.push who: @userId, what: 'traded hands'
       else
-        throw new Meteor.Error("card #{card} not yet implemented")
+        throw new Meteor.Error("card #{card.name} not yet implemented")
         removeCard()
 
     updateGame gid, logs, update unless _.isEmpty update

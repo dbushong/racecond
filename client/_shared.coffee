@@ -3,8 +3,8 @@ hand     = -> Hands.findOne(game_id: game()._id).cards
 isCurrentPlayer = -> game().cur_player is Meteor.userId()
 handleErr = (name, err) ->
   if err
-    console.error action, err
-    alert "failed to #{action}: #{err.reason}"
+    console.error name, err
+    alert "failed to #{name}: #{err.reason ? err.error ? error.details}"
 
 orList = (arr, word='or') ->
   switch arr.length

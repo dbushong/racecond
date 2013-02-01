@@ -129,10 +129,10 @@ Cards =
     copies: 3
     actions: 1
     args: ['hand_instruction', 'position', 'indent']
-    valid: (g, h, hpos, { hand_instruction, position }) ->
+    valid: (g, h, hpos, { hand_instruction, position, indent }) ->
       (c = Cards[h[hand_instruction]]) and not c.actions? and
         0 <= position <= g.program.length and
-        _.findWhere validPlays(g, h, hand_instruction), { position }
+        _.findWhere validPlays(g, h, hand_instruction), { position, indent }
   'KILL THREAD':
     descr: 'Remove any single NEXT pointer.\nChoose any NEXT card on the board to remove.  If another NEXT pointer exists, discard the selected card.  If this is the only NEXT pointer on the board, move it to the top of the program.'
     actions: 1
@@ -294,7 +294,7 @@ validPlays = (g, h, hpos) ->
         when 'instruction' then [0...g.program.length]
         when 'thread' then (i for t, i in g.threads when t?)
         when 'position' then [0..g.program.length]
-        when 'hand_instruction' then (c for c in h when !Cards[c].actions)
+        when 'hand_instruction' then (i for c,i in h when !Cards[c].actions)
         when 'hand_cards'
           if h.length > 1
             s.join(',') for s in powerSet(i for c,i in h when i isnt hpos)

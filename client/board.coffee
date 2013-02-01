@@ -114,17 +114,26 @@ _.extend Template.status,
     "#{uid and username uid}#{if uid is Meteor.userId() then ' (you)' else ''}"
   winner: -> (w = game().winner) and username(w)
 
+# if it's an instruction card, it must be played at the end position,
+# else no pre-chosen args
+isPlayable = (g, h, hpos) ->
+  plays = validPlays(g, h, hpos)
+  if Cards[h[hpos]].actions
+    plays.length > 0
+  else
+    !!_.findWhere plays, position: g.program.length
+
 Template.hand.haveCards = -> !!hand().length
 Template.hand.cards = ->
   g = game()
   h = hand()
-  for name, i in h
+  for name, hpos in h
     card  = Cards[name]
     {
     name:     "#{name}#{if card.actions is 2 then ' -- 2 actions' else ''}"
     descr:    card.descr
-    index:    i
-    playable: isCurrentPlayer() and validPlays(g, h, i).length > 0
+    index:    hpos
+    playable: isCurrentPlayer() and isPlayable(g, h, hpos)
     }
 
 Template.hand.canDrawCard = -> isCurrentPlayer() and hand().length < 5

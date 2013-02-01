@@ -243,11 +243,15 @@ Meteor.methods
     unless 0 <= hpos < h.cards.length
       throw new Meteor.Error("invalid hand index: #{hpos}")
 
+    card = Cards[h.cards[hpos]]
+
+    unless card.actions or args.position is g.program.length
+      throw new Meteor.Error("invalid position for instruction card play")
+
     plays = validPlays g, h.cards, hpos
     unless _.isEqual(args, plays[0]) or _.findWhere(plays, args)
       throw new Meteor.Error('not a valid play')
 
-    card = Cards[h.cards[hpos]]
     update = $inc: { actions_left: -(card.actions ? 1) }
 
     removeCard = ->

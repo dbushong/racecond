@@ -323,13 +323,14 @@ Meteor.methods
         logs.push { who: @userId, what }
       when 'NEW HAND'
         if args.hand_cards.length > 0
+          hc = (Number(n) for n in args.hand_cards.split(/,/))
           logs.push
             who:  @userId
-            what: "discarded #{pluralize args.hand_cards.length, 'card'}"
+            what: "discarded #{pluralize hc.length, 'card'}"
           new_hand = []
           discard  = []
           for c, i in h.cards
-            (if i is hpos or i in args.hand_cards then discard else new_hand)
+            (if i is hpos or i in hc then discard else new_hand)
               .push(c)
           ndraw = 5 - new_hand.length
 
@@ -349,7 +350,7 @@ Meteor.methods
             logs.push what: 'draw pile was refreshed'
           else
             # if not, add our discards onto the discard pile
-            update.$pushAll = discard: discard
+            update.$pushAll = { discard }
             update.$set     = {}
 
           new_hand.push g.deck.splice(0, ndraw)...
@@ -357,6 +358,7 @@ Meteor.methods
             [ 'deck',                   g.deck ]
             [ "hand_counts.#{@userId}", 5      ]
           ])
+          delete update.$inc["hand_counts.#{@userId}"]
 
           Hands.update h._id, $set: { cards: new_hand }
           removeCard = ->

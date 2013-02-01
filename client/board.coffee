@@ -66,7 +66,7 @@ playSpecialActionCard = (pos, card) ->
       when 'hand_cards'
         cs = prompt "Choose one or more card numbers from your hand to discard, separated by commas"
         return unless cs?
-        args.hand_cards = (Number(n)-1 for n in cs.split(/\s*,\s*/))
+        args.hand_cards = (Number(n)-1 for n in cs.split(/\s*,\s*/)).join(',')
       when 'set_i'
         i = prompt "Choose value to set i to (-2..2)"
         return unless i?

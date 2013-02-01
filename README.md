@@ -12,6 +12,7 @@ Done
 * Basic board/hand display
 * Let you actually play some cards
 * Execute instructions on cards
+* Let you advance threads
 
 TODO
 ----

@@ -11,11 +11,11 @@ Done
 * Game resumption
 * Basic board/hand display
 * Let you actually play some cards
+* Execute instructions on cards
 
 TODO
 ----
 * Let you actually play all cards
-* Execute instructions on cards
 * Secure database inserts/updates.
 * Pretty
 

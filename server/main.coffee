@@ -293,7 +293,9 @@ Meteor.methods
             [ "hand_counts.#{@userId}", other_hand.cards.length ]
             [ "hand_counts.#{other_player}",     h.cards.length ]
           ]
-        logs.push who: @userId, what: 'traded hands'
+        logs.push
+          who:  @userId
+          what: "traded hands with #{username other_player}"
       when 'skip all threads'
         update = $set: { skip_advance: [0, 1, 2] }
         logs.push who: @userId, what: 'will skip turn-end execution'

@@ -34,31 +34,33 @@ executeThread = (g, thread, set, logs) ->
 
   if card.assign
     _.extend set, card.assign(g)
-    logs.push what: "executed instruction: #{card.name}"
+    what = "executed instruction: #{card.name}"
   else if card.if
     if card.if(g)
-      logs.push what: 'entered if clause'
+      what = 'entered if clause'
     else
-      logs.push what: 'skipped if clause'
+      what = 'skipped if clause'
       next = (entry.end_pos ? entry.pos) + 1
   else if card.while
     if card.while(g)
-      logs.push what: 'entered while loop'
+      what = 'entered while loop'
     else
-      logs.push what: 'skipped while loop'
+      what = 'skipped while loop'
       next = (entry.end_pos ? entry.pos) + 1
   else if card.name is 'break'
-    logs.push what: 'broke out of while loop'
+    what = 'broke out of while loop'
     next = whiles.shift().end_pos + 1
   else if card.name is 'else'
     prv = entry.parent.seq[_.indexOf(entry.parent.seq, entry) - 1]
     if Cards[entry.instr].if(g)
-      logs.push what: 'skipped else clause'
+      what = 'skipped else clause'
       next = (entry.end_pos ? entry.pos) + 1
     else
-      logs.push what: 'entered else clause'
+      what = 'entered else clause'
   else
     throw new Meteor.Error("unmatched card type #{card.name}")
+
+  logs.push what: "T#{thread+1}: #{what}"
 
   # see if we need to loop back up in a while clause
   for whl in whiles
@@ -69,6 +71,7 @@ executeThread = (g, thread, set, logs) ->
   set["threads.#{thread}"] = next
 
 executeAllThreads = (g, set, logs, auto=false) ->
+  console.log 'executeAllThreads', auto, JSON.stringify(g.skip_advance)
   for instr, thread in g.threads
     if instr? and not (auto and thread in g.skip_advance)
       executeThread g, thread, set, logs
@@ -267,12 +270,12 @@ Meteor.methods
       return
 
     # ok, it's a special action.  switch of dooooom
-    update  = {}
+    update  = $inc: { actions_left: -card.actions }
     logs    = [
       what: "played special action card: #{card.name.toUpperCase()}"
       who:  @userId
     ]
-    discardCard = -> update.$push = { discard: card.name }
+    discardCard = -> _.extend (update.$push ||= {}), discard: card.name
 
     switch card.name
       when 'trade hands'
@@ -304,9 +307,16 @@ Meteor.methods
       when 'kill thread'
         # if there's only one thread left, move it to the top instead of
         # deleting
+        if _.without(g.threads, null).length is 1
+          what  = "moved thread #{args.thread+1} to the top"
+          instr = 0
+        else
+          what  = "killed thread #{args.thread+1}"
+          instr = null
+
         update.$set = {}
-        update.$set["threads.#{args.thread}"] =
-          if (_.without(g.threads, null).length is 1) then 0 else null
+        update.$set["threads.#{args.thread}"] = instr
+        logs.push { who: @userId, what }
       when 'new hand'
         if args.hand_cards.length > 0
           logs.push
@@ -340,8 +350,8 @@ Meteor.methods
 
           new_hand.push g.deck.splice(0, ndraw)...
           _.extend update.$set, _.object([
-            'deck',                   g.deck
-            "hand_counts.#{@userId}", 5
+            [ 'deck',                   g.deck ]
+            [ "hand_counts.#{@userId}", 5      ]
           ])
 
           Hands.update h._id, $set: { cards: new_hand }
@@ -349,14 +359,22 @@ Meteor.methods
           discardCard = ->
       when 'set next'
         _.extend update,
-          $set: _.object [ "threads.#{args.thread}", args.instruction ]
+          $set: _.object [ [ "threads.#{args.thread}", args.instruction ] ]
           $push: { skip_advance: args.thread }
         logs.push
           who:  @userId
           what: "moved thread ##{args.thread+1} to position #{args.instruction+1}"
+      when 'new thread (2)', 'new thread (3)'
+        thread = (if card.name is 'new thread (2)' then 1 else 2)
+        _.extend update,
+          $set:  _.object [ [ "threads.#{thread}", args.instruction ] ]
+          $push: { skip_advance: thread }
+        logs.push
+          who:  @userId
+          what: "created #{card.name} at position #{args.instruction+1}"
       else
         throw new Meteor.Error("card #{card.name} not yet implemented")
 
     removeCard()
     discardCard()
-    updateGame gid, logs, update unless _.isEmpty set
+    updateGame gid, logs, update unless _.isEmpty update

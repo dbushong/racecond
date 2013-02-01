@@ -138,7 +138,7 @@ Cards =
     descr: 'Remove any single NEXT pointer.\nChoose any NEXT card on the board to remove.  If another NEXT pointer exists, discard the selected card.  If this is the only NEXT pointer on the board, move it to the top of the program.'
     actions: 1
     args: ['thread']
-    valid: (g, h, hpos, { thread }) -> thread in g.threads
+    valid: (g, h, hpos, { thread }) -> g.threads[thread]?
   'new hand':
     descr: 'Draw a fresh hand.\nDiscard as many cards as desired.  Draw new cards until your hand contains 5 cards.'
     actions: 1
@@ -146,12 +146,12 @@ Cards =
     valid: (g, h, pos, { hand_cards }) ->
       _.every hand_cards, (c) -> 0 <= c < h.length and c isnt pos
   'new thread (2)':
-    descr: 'FIXME'
+    descr: 'Place at any instruction.\nStarts a new thread.  Uses both actions, and the new instruction does not execute this turn.'
     actions: 2
     args: ['instruction']
     valid: (g, h, pos, { instruction }) -> 0 <= instruction < g.program.length
   'new thread (3)':
-    descr: 'FIXME'
+    descr: 'Place at any instruction.\nStarts a new thread.  Uses both actions, and the new instruction does not execute this turn.'
     actions: 2
     args: ['instruction']
     valid: (g, h, pos, { instruction }) -> 0 <= instruction < g.program.length
@@ -166,8 +166,7 @@ Cards =
     count: 2
     args: ['thread', 'instruction']
     valid: (g, h, pos, { thread, instruction }) ->
-      thread in g.threads and 0 <= instruction < g.program.length
-    advance: false
+      g.threads[thread]? and 0 <= instruction < g.program.length
   'skip all threads':
     descr: 'Playing this card cancels the Advance Next phase of this turn.  No NEXT pointers are executed or moved.'
     actions: 1
@@ -290,7 +289,7 @@ validPlays = (g, h, hpos) ->
         when 'thread' then (i for t, i in g.threads when t?)
         when 'position' then [0..g.program.length]
         when 'hand_instruction' then (c for c in h when !Cards[c].actions)
-        when 'hand_cards' then (if h.length > 1 then ['ok'] else [])
+        when 'hand_cards' then (if h.length > 1 then [[]] else [])
         when 'set_i' then [-2..2]
         when 'indent' then [-max_depth..1]
         else throw new Meteor.Error('wtf bad arg')

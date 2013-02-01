@@ -1,6 +1,7 @@
 Accounts.ui.config passwordSignupFields: 'USERNAME_AND_OPTIONAL_EMAIL'
 
 Handlebars.registerHelper 'pluralize', pluralize
+Handlebars.registerHelper 'currentPlayer', isCurrentPlayer
 
 Meteor.startup ->
   Meteor.subscribe 'players'

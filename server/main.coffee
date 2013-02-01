@@ -11,6 +11,9 @@ Meteor.publish 'players', ->
 Meteor.publish 'requests', ->
   Requests.find { '$or': [ { to: @userId }, { from: @userId } ] }
 
+verifyTurn = (g, uid) ->
+  throw new Meteor.Error('not your turn') unless g.cur_player is uid
+
 updateGame = (gid, logs, changes) ->
   console.log 'updateGame', gid, JSON.stringify(changes)
   now = new Date
@@ -34,6 +37,7 @@ executeThread = (g, thread, set, logs) ->
     whiles.push ptr if /^while /.test ptr.instr
 
   if card.assign
+    old_x = g.x
     _.extend set, card.assign(g)
     what = "executed instruction: #{card.name}"
   else if card.if
@@ -177,9 +181,7 @@ Meteor.methods
     g = game(gid)
     h = Hands.findOne(user_id: @userId, game_id: gid)
 
-    # TODO: DRY
-    if g.cur_player isnt @userId
-      throw new Meteor.Error('not your turn')
+    verifyTurn g, @userId
 
     if h.cards.length > 4
       throw new Meteor.Error('your hand is full')
@@ -200,9 +202,7 @@ Meteor.methods
     g = game(gid)
     h = Hands.findOne(user_id: @userId, game_id: gid)
 
-    # TODO: DRY
-    if g.cur_player isnt @userId
-      throw new Meteor.Error('not your turn')
+    verifyTurn g, @userId
 
     if i < 0 or i >= h.cards.length
       throw new Meteor.Error("invalid hand index: #{i}")
@@ -238,9 +238,7 @@ Meteor.methods
     g = game(gid)
     h = Hands.findOne(user_id: @userId, game_id: gid)
 
-    # TODO: DRY
-    if g.cur_player isnt @userId
-      throw new Meteor.Error('not your turn')
+    verifyTurn g, @userId
 
     unless 0 <= hpos < h.cards.length
       throw new Meteor.Error("invalid hand index: #{hpos}")
@@ -376,3 +374,17 @@ Meteor.methods
     removeCard()
     discardCard()
     updateGame gid, logs, update unless _.isEmpty update
+
+  advanceThread: (gid, thread) ->
+    g = game(gid)
+
+    verifyTurn g, @userId
+
+    throw new Meteor.Error("invalid thread #{thread}") unless g.threads[thread]?
+
+    logs = [ who: @userId, what: "advanced thread #{thread+1}" ]
+    update =
+      $inc: { actions_left: -1 }
+      $set: {}
+    executeThread g, thread, update.$set, logs
+    updateGame gid, logs, update

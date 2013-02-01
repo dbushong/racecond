@@ -75,18 +75,25 @@
   {{{indent}}}
       {{name}}
   {{#each threads}}
-      <b>← T{{this}}</b>
+      {{> thread}}
   {{/each}}
     </li>
 {{/each}}
 {{#if hungThreads}}
     <li>
   {{#each hungThreads}}
-      <b>← T{{this}}</b>
+      {{> thread}}
   {{/each}}
     </li>
 {{/if}}
   </ol>
+</template>
+
+<template name="thread">
+  <b>← T{{this}}</b>
+{{#if currentPlayer}}
+  <a href="#" class="advance-thread" data-thread="{{this}}">Advance Thread</a>
+{{/if}}
 </template>
 
 <template name="discards">

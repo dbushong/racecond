@@ -127,7 +127,6 @@ Template.hand.cards = ->
     playable: isCurrentPlayer() and validPlays(g, h, i).length > 0
     }
 
-Template.hand.currentPlayer = -> isCurrentPlayer()
 Template.hand.canDrawCard = -> isCurrentPlayer() and hand().length < 5
 Template.hand.events
   'click a.play-card': (e) ->
@@ -153,8 +152,16 @@ Template.hand.events
     false
 
 Template.log.entries = ->
-  for entry in game().log
+  for entry in game().log.reverse()
     "#{entry.when}#{if entry.who? then " #{username entry.who}" else ''} #{entry.what}"
+
+Template.thread.events
+  'click a.advance-thread': (e) ->
+    thread = Number(e.target.dataset.thread) - 1
+    console.log "advancing thread #{thread}"
+    Meteor.call 'advanceThread', game()._id, thread, (err) ->
+      alert "failed to advance thread: #{err.reason}" if err
+    false
 
 Template.program.hungThreads = ->
   g = game()

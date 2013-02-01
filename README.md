@@ -10,13 +10,13 @@ Done
 * Game creation
 * Game resumption
 * Basic board/hand display
-* Let you actually play some cards
+* Let you actually play most cards
 * Execute instructions on cards
 * Let you advance threads
 
 TODO
 ----
-* Let you actually play all cards
+* Implement MOVE, DELETE, and INSERT CARD
 * Secure database inserts/updates.
 * Pretty
 

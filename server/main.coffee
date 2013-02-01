@@ -376,6 +376,7 @@ Meteor.methods
         update.$set = i: args.set_i
         logs.push who: @userId, what: "set i to #{args.set_i}"
       else
+        # DELETE CARD, MOVE CARD, INSERT CARD
         throw new Meteor.Error("card #{card.name} not yet implemented")
 
     removeCard()

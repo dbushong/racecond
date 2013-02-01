@@ -15,12 +15,17 @@
   <h2>Log</h2>
   {{> log}}
 
-  <p><a href="#" id="back-to-lobby">Back to Lobby</a></p>
+  <p><a href="#" class="back-to-lobby">Back to Lobby</a></p>
   <p><a href="#" id="forfeit">Forfeit</a></p>
 {{/if}}
 </template>
 
 <template name="status">
+{{#if winner}}
+  <h3>Game Over</h3>
+  <h4>{{winner}} won the game with x = {{x}}</h4>
+  <p><a href="#" class="back-to-lobby">Back to Lobby</a></p>
+{{else}}
   <div>Your goal: x {{goal}}</div>
   <div>Current player: {{current}}</div>
   <div>Other player's hand: {{pluralize other_count 'card'}}</div>
@@ -28,6 +33,7 @@
   <div>x: {{x}}</div>
   <div>i: {{i}}</div>
   <div>Draw pile: {{pluralize deck_count 'card'}} remaining</div>
+{{/if}}
 </template>
 
 <template name="hand">

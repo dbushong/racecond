@@ -87,7 +87,7 @@ playSpecialActionCard = (pos, card) ->
 
 Template.board.show = -> !!game()
 Template.board.events
-  'click #back-to-lobby': ->
+  'click .back-to-lobby': ->
     Session.set('game_id', null)
     false
   'click #forfeit': ->
@@ -110,7 +110,8 @@ _.extend Template.status,
   deck_count: -> game().deck_count
   current: ->
     uid = game().cur_player
-    "#{username uid}#{if uid is Meteor.userId() then ' (you)' else ''}"
+    "#{uid and username uid}#{if uid is Meteor.userId() then ' (you)' else ''}"
+  winner: -> (w = game().winner) and username(w)
 
 Template.hand.haveCards = -> !!hand().length
 Template.hand.cards = ->

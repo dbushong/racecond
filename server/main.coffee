@@ -313,6 +313,9 @@ Meteor.methods
         else
           what  = "killed thread #{args.thread+1}"
           instr = null
+          discardCard = ->
+          update.$pushAll =
+            discard: [ "NEW THREAD (#{args.thread+1})", card.name ]
 
         update.$set = {}
         update.$set["threads.#{args.thread}"] = instr
@@ -365,11 +368,12 @@ Meteor.methods
         logs.push
           who:  @userId
           what: "moved thread ##{args.thread+1} to position #{args.instruction+1}"
-      when 'NEW THREAD (2)', 'NEW THREAD (3)'
-        thread = (if card.name is 'new thread (2)' then 1 else 2)
+      when 'NEW THREAD (1)', 'NEW THREAD (2)', 'NEW THREAD (3)'
+        thread = Number(card.name[12])-1
         _.extend update,
           $set:  _.object [ [ "threads.#{thread}", args.instruction ] ]
           $push: { skip_advance: thread }
+        discardCard = -> # the new thread cards are on the board
         logs.push
           who:  @userId
           what: "created #{card.name} at position #{args.instruction+1}"

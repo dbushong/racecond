@@ -270,8 +270,12 @@ Meteor.methods
       return
 
     # ok, it's a special action.  switch of dooooom
-    update  = $inc: { actions_left: -card.actions }
-    logs    = [
+    update =
+      $inc: _.object [
+        [ 'actions_left', -card.actions ]
+        [ "hand_counts.#{@userId}",  -1 ]
+      ]
+    logs = [
       what: "played special action card: #{card.name}"
       who:  @userId
     ]
@@ -293,9 +297,7 @@ Meteor.methods
             [ "hand_counts.#{@userId}", other_hand.cards.length ]
             [ "hand_counts.#{other_player}",     h.cards.length ]
           ]
-        logs.push
-          who:  @userId
-          what: "traded hands with #{username other_player}"
+        logs.push who: @userId, what: 'traded hands'
       when 'SKIP ALL THREADS'
         update = $set: { skip_advance: [0, 1, 2] }
         logs.push who: @userId, what: 'will skip turn-end execution'
@@ -379,4 +381,5 @@ Meteor.methods
 
     removeCard()
     discardCard()
+    console.log 'updating game', JSON.stringify(update)
     updateGame gid, logs, update unless _.isEmpty update

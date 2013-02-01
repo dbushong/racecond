@@ -139,12 +139,13 @@ Cards =
     actions: 1
     args: ['thread']
     valid: (g, h, hpos, { thread }) -> g.threads[thread]?
-  'new hand':
+  'NEW HAND':
     descr: 'Draw a fresh hand.\nDiscard as many cards as desired.  Draw new cards until your hand contains 5 cards.'
     actions: 1
     args: ['hand_cards']
     valid: (g, h, pos, { hand_cards }) ->
-      _.every hand_cards, (c) -> 0 <= c < h.length and c isnt pos
+      hand_cards.length < h.length and
+        _.every hand_cards, (c) -> 0 <= c < h.length and c isnt pos
   'NEW THREAD (2)':
     descr: 'Place at any instruction.\nStarts a new thread.  Uses both actions, and the new instruction does not execute this turn.'
     actions: 2
@@ -257,6 +258,11 @@ cartesianProduct = (sets) ->
     ), []
   ), [[]]
 
+powerSet = (set) ->
+  return [[]] unless set.length
+  s = powerSet set[1..]
+  s.concat([set[0], x...] for x in s)
+
 # takes: game object, array of cards (hand) as argument, and index of card
 # to review
 #
@@ -289,7 +295,8 @@ validPlays = (g, h, hpos) ->
         when 'thread' then (i for t, i in g.threads when t?)
         when 'position' then [0..g.program.length]
         when 'hand_instruction' then (c for c in h when !Cards[c].actions)
-        when 'hand_cards' then (if h.length > 1 then [[]] else [])
+        when 'hand_cards'
+          if h.length > 1 then powerSet(i for c,i in h when i isnt hpos) else []
         when 'set_i' then [-2..2]
         when 'indent' then [-max_depth..1]
         else throw new Meteor.Error('wtf bad arg')

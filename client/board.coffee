@@ -75,6 +75,7 @@ playSpecialActionCard = (pos, card) ->
         throw new Meteor.Error('wtf arg')
 
     unless _.findWhere(plays, args)
+      console.log 'invalid', args, plays
       alert 'No valid plays for those options'
       return
 

@@ -272,13 +272,13 @@ Meteor.methods
     # ok, it's a special action.  switch of dooooom
     update  = $inc: { actions_left: -card.actions }
     logs    = [
-      what: "played special action card: #{card.name.toUpperCase()}"
+      what: "played special action card: #{card.name}"
       who:  @userId
     ]
     discardCard = -> _.extend (update.$push ||= {}), discard: card.name
 
     switch card.name
-      when 'trade hands'
+      when 'TRADE HANDS'
         other_player = _.without(g.players, @userId)[0]
         other_hand   = Hands.findOne game_id: gid, user_id: other_player
 
@@ -296,17 +296,17 @@ Meteor.methods
         logs.push
           who:  @userId
           what: "traded hands with #{username other_player}"
-      when 'skip all threads'
+      when 'SKIP ALL THREADS'
         update = $set: { skip_advance: [0, 1, 2] }
         logs.push who: @userId, what: 'will skip turn-end execution'
-      when 'advance all threads'
+      when 'ADVANCE ALL THREADS'
         executeAllThreads g, (set = {}), logs
         update = $set: set
-      when 'fast forward'
+      when 'FAST FORWARD'
         executeThread g, args.thread, (set = {}), logs
         executeThread g, args.thread, set, logs
         update = $set: set
-      when 'kill thread'
+      when 'KILL THREAD'
         # if there's only one thread left, move it to the top instead of
         # deleting
         if _.without(g.threads, null).length is 1
@@ -319,7 +319,7 @@ Meteor.methods
         update.$set = {}
         update.$set["threads.#{args.thread}"] = instr
         logs.push { who: @userId, what }
-      when 'new hand'
+      when 'NEW HAND'
         if args.hand_cards.length > 0
           logs.push
             who:  @userId
@@ -359,14 +359,14 @@ Meteor.methods
           Hands.update h._id, $set: { cards: new_hand }
           removeCard = ->
           discardCard = ->
-      when 'set next'
+      when 'SET NEXT'
         _.extend update,
           $set: _.object [ [ "threads.#{args.thread}", args.instruction ] ]
           $push: { skip_advance: args.thread }
         logs.push
           who:  @userId
           what: "moved thread ##{args.thread+1} to position #{args.instruction+1}"
-      when 'new thread (2)', 'new thread (3)'
+      when 'NEW THREAD (2)', 'NEW THREAD (3)'
         thread = (if card.name is 'new thread (2)' then 1 else 2)
         _.extend update,
           $set:  _.object [ [ "threads.#{thread}", args.instruction ] ]

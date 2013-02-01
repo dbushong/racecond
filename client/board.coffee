@@ -120,7 +120,7 @@ Template.hand.cards = ->
   for name, i in h
     card  = Cards[name]
     {
-    name:     "#{if card.actions then name.toUpperCase() else name}#{if card.actions is 2 then ' -- 2 actions' else ''}"
+    name:     "#{name}#{if card.actions is 2 then ' -- 2 actions' else ''}"
     descr:    card.descr
     index:    i
     playable: isCurrentPlayer() and validPlays(g, h, i).length > 0

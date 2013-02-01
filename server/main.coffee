@@ -68,9 +68,10 @@ executeThread = (g, thread, set, logs) ->
 
   set["threads.#{thread}"] = next
 
-executeAllThreads = (g, set, logs) ->
+executeAllThreads = (g, set, logs, auto=false) ->
   for instr, thread in g.threads
-    executeThread g, thread, set, logs if instr?
+    if instr? and not (auto and thread in g.skip_advance)
+      executeThread g, thread, set, logs
 
 Meteor.startup ->
   # game logic triggered events
@@ -108,11 +109,14 @@ Meteor.startup ->
 
         # is the player's turn over?
         if g.actions_left is 0
-          executeAllThreads(g, set, logs)
+          executeAllThreads(g, set, logs, true)
 
           who = g.players[if g.cur_player is g.players[0] then 1 else 0]
           logs.push { who, what: 'began turn' }
-          _.extend set, actions_left: 2, cur_player: who
+          _.extend set,
+            actions_left: 2
+            cur_player:   who
+            skip_advance: []
 
       unless _.isEmpty set
         updateGame g._id, logs, $set: set
@@ -150,6 +154,7 @@ Meteor.methods
       deck_count:   deck.length
       hand_counts:  hcounts
       request_id:   request_id
+      skip_advance: []
       log:          [
         { when: now, who: null,       what: 'game started'           }
         { when: now, who: players[0], what: 'became negative player' }
@@ -226,7 +231,7 @@ Meteor.methods
         winner:      _.without(g.players, @userId)[0]
         cur_player:  null
 
-  playCard: (gid, i, args={}) ->
+  playCard: (gid, hpos, args={}) ->
     g = game(gid)
     h = Hands.findOne(user_id: @userId, game_id: gid)
 
@@ -234,15 +239,17 @@ Meteor.methods
     if g.cur_player isnt @userId
       throw new Meteor.Error('not your turn')
 
-    unless 0 <= i < h.cards.length
-      throw new Meteor.Error("invalid hand index: #{i}")
+    unless 0 <= hpos < h.cards.length
+      throw new Meteor.Error("invalid hand index: #{hpos}")
 
-    plays = validPlays g, h.cards, i
+    plays = validPlays g, h.cards, hpos
     unless _.isEqual(args, plays[0]) or _.findWhere(plays, args)
       throw new Meteor.Error('not a valid play')
 
-    card = Cards[h.cards.splice(i, 1)[0]]
-    removeCard = -> Hands.update h._id, $set: { cards: h.cards }
+    card = Cards[h.cards[hpos]]
+    removeCard = ->
+      h.cards.splice(hpos, 1)
+      Hands.update h._id, $set: { cards: h.cards }
 
     # if it's an instruction, let's stick it on the end
     unless card.actions
@@ -260,25 +267,96 @@ Meteor.methods
       return
 
     # ok, it's a special action.  switch of dooooom
-    update = {}
-    logs   = []
+    update  = {}
+    logs    = [
+      what: "played special action card: #{card.name.toUpperCase()}"
+      who:  @userId
+    ]
+    discardCard = -> update.$push = { discard: card.name }
+
     switch card.name
       when 'trade hands'
         other_player = _.without(g.players, @userId)[0]
         other_hand   = Hands.findOne game_id: gid, user_id: other_player
 
+        h.cards.splice(hpos, 1)
         Hands.update h._id,          $set: { cards: other_hand.cards }
         Hands.update other_hand._id, $set: { cards: h.cards          }
+        # we took care of the hand; no need to do this
+        removeCard = ->
 
         update =
           $set: _.object [
             [ "hand_counts.#{@userId}", other_hand.cards.length ]
             [ "hand_counts.#{other_player}",     h.cards.length ]
           ]
-        
         logs.push who: @userId, what: 'traded hands'
+      when 'skip all threads'
+        update = $set: { skip_advance: [0, 1, 2] }
+        logs.push who: @userId, what: 'will skip turn-end execution'
+      when 'advance all threads'
+        executeAllThreads g, (set = {}), logs
+        update = $set: set
+      when 'fast forward'
+        executeThread g, args.thread, (set = {}), logs
+        executeThread g, args.thread, set, logs
+        update = $set: set
+      when 'kill thread'
+        # if there's only one thread left, move it to the top instead of
+        # deleting
+        update.$set = {}
+        update.$set["threads.#{args.thread}"] =
+          if (_.without(g.threads, null).length is 1) then 0 else null
+      when 'new hand'
+        if args.hand_cards.length > 0
+          logs.push
+            who:  @userId
+            what: "discarded #{pluralize args.hand_cards.length, 'card'}"
+          new_hand = []
+          discard  = []
+          for c, i in h.cards
+            (if i is hpos or i in args.hand_cards then discard else new_hand)
+              .push(c)
+          ndraw = 5 - new_hand.length
+
+          logs.push
+            who:  @userId
+            what: "drew #{pluralize ndraw, 'card'}"
+
+          # do we need to reshuffle already?
+          if ndraw > g.deck.length
+            # put what's left on the deck into our hand
+            new_hand.push g.deck...
+            ndraw -= g.deck.length
+            # shuffle ourselves a new deck from the combined discard piles
+            g.deck = _.shuffle discard.concat(g.discard)
+            # mark the discard pile empty
+            update.$set = discard: []
+            logs.push what: 'draw pile was refreshed'
+          else
+            # if not, add our discards onto the discard pile
+            update.$pushAll = discard: discard
+            update.$set     = {}
+
+          new_hand.push g.deck.splice(0, ndraw)...
+          _.extend update.$set, _.object([
+            'deck',                   g.deck
+            "hand_counts.#{@userId}", 5
+          ])
+
+          Hands.update h._id, $set: { cards: new_hand }
+          removeCard = ->
+          discardCard = ->
+      when 'set next'
+        _.extend update,
+          $set: _.object [ "threads.#{args.thread}", args.instruction ]
+          $push: { skip_advance: args.thread }
+        logs.push
+          who:  @userId
+          what: "moved thread ##{args.thread+1} to position #{args.instruction+1}"
       else
         throw new Meteor.Error("card #{card.name} not yet implemented")
-        removeCard()
 
-    updateGame gid, logs, update unless _.isEmpty update
+    removeCard()
+    discardCard()
+    updateGame gid, logs, update unless _.isEmpty set

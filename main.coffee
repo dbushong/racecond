@@ -11,6 +11,7 @@
 , created_at:   Date
 , updated_at:   Date
 , finished_at:  null|Date
+, skip_advance: [] // which treads to skip execute/advancing at turn end
 , deck:         [ 'card_id', ... ] // kept secret from players
 , deck_count:   Number
 , hand_counts:  { <uid>: Number, <uid>: Number }
@@ -88,7 +89,7 @@ Cards =
       # with a dependent else/break in it
       0 <= instruction < g.program.length and instruction not in g.threads
   'fast forward':
-    descr: 'FIXME'
+    descr: 'Advance any single NEXT pointer twice.\nIn other words, choose any NEXT card on the board, execute the instruction it points to, move it to its next instruction, execute that instruction, and move it to the next instruction after that one.'
     copies: 2
     actions: 1
     args: ['thread']
@@ -134,12 +135,12 @@ Cards =
       (c = Cards[h[hand_instruction]]) and not c.actions? and
         0 <= position <= g.program.length
   'kill thread':
-    descr: 'FIXME'
+    descr: 'Remove any single NEXT pointer.\nChoose any NEXT card on the board to remove.  If another NEXT pointer exists, discard the selected card.  If this is the only NEXT pointer on the board, move it to the top of the program.'
     actions: 1
     args: ['thread']
-    valid: (g, h, pos, { thread }) -> thread in g.threads
+    valid: (g, h, hpos, { thread }) -> thread in g.threads
   'new hand':
-    descr: 'FIXME'
+    descr: 'Draw a fresh hand.\nDiscard as many cards as desired.  Draw new cards until your hand contains 5 cards.'
     actions: 1
     args: ['hand_cards']
     valid: (g, h, pos, { hand_cards }) ->
@@ -160,7 +161,7 @@ Cards =
     args: ['set_i']
     valid: (g, h, pos, { set_i }) -> -2 <= set_i <= 2
   'set next':
-    descr: 'FIXME'
+    descr: "Move any single NEXT pointer to point to any instruction on the board.\nPlaying this card uses both of the player's actions, and the new instruction does not execute during the Advance Next phase of this turn."
     actions: 2
     count: 2
     args: ['thread', 'instruction']
@@ -168,7 +169,7 @@ Cards =
       thread in g.threads and 0 <= instruction < g.program.length
     advance: false
   'skip all threads':
-    descr: 'FIXME'
+    descr: 'Playing this card cancels the Advance Next phase of this turn.  No NEXT pointers are executed or moved.'
     actions: 1
     valid: -> true
   'trade hands':

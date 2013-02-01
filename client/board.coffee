@@ -131,7 +131,7 @@ Template.hand.currentPlayer = -> isCurrentPlayer()
 Template.hand.canDrawCard = -> isCurrentPlayer() and hand().length < 5
 Template.hand.events
   'click a.play-card': (e) ->
-    pos  = e.target.dataset.index
+    pos  = Number(e.target.dataset.index)
     card = Cards[hand()[pos]]
     if card.actions
       console.log "playing special action card #{card.name}"
@@ -141,7 +141,7 @@ Template.hand.events
       playInstructionCard pos
     false
   'click a.discard-card': (e) ->
-    i = e.target.dataset.index
+    i = Number(e.target.dataset.index)
     console.log "discarding card: #{hand()[i]}"
     Meteor.call 'discardCard', game()._id, i, (err) ->
       alert "failed to discard card: #{err.reason}" if err

@@ -12,6 +12,7 @@ Meteor.publish 'requests', ->
   Requests.find { '$or': [ { to: @userId }, { from: @userId } ] }
 
 updateGame = (gid, logs, changes) ->
+  console.log 'updateGame', gid, JSON.stringify(changes)
   now = new Date
   (changes.$pushAll ||= {}).log =
     _.extend log, when: now for log in _.flatten([logs]) when log.what?
@@ -71,7 +72,6 @@ executeThread = (g, thread, set, logs) ->
   set["threads.#{thread}"] = next
 
 executeAllThreads = (g, set, logs, auto=false) ->
-  console.log 'executeAllThreads', auto, JSON.stringify(g.skip_advance)
   for instr, thread in g.threads
     if instr? and not (auto and thread in g.skip_advance)
       executeThread g, thread, set, logs
@@ -250,9 +250,12 @@ Meteor.methods
       throw new Meteor.Error('not a valid play')
 
     card = Cards[h.cards[hpos]]
+    update = $inc: { actions_left: -(card.actions ? 1) }
+
     removeCard = ->
       h.cards.splice(hpos, 1)
       Hands.update h._id, $set: { cards: h.cards }
+      update.$inc["hand_counts.#{@userId}"] = -1
 
     # if it's an instruction, let's stick it on the end
     unless card.actions
@@ -260,21 +263,13 @@ Meteor.methods
       removeCard()
 
       # add card to program, decrement action count, decrement hand count
+      update.$push = program: [ card.name, args.indent ]
       updateGame gid, { who: @userId, what: "added instruction: #{card.name}" },
-        $push: { program: [ card.name, args.indent ] }
-        $inc:  _.object [
-          [ 'actions_left',           -1 ]
-          [ "hand_counts.#{@userId}", -1 ]
-        ]
+        update
 
       return
 
     # ok, it's a special action.  switch of dooooom
-    update =
-      $inc: _.object [
-        [ 'actions_left', -card.actions ]
-        [ "hand_counts.#{@userId}",  -1 ]
-      ]
     logs = [
       what: "played special action card: #{card.name}"
       who:  @userId
@@ -299,15 +294,13 @@ Meteor.methods
           ]
         logs.push who: @userId, what: 'traded hands'
       when 'SKIP ALL THREADS'
-        update = $set: { skip_advance: [0, 1, 2] }
+        update.$set = skip_advance: [0, 1, 2]
         logs.push who: @userId, what: 'will skip turn-end execution'
       when 'ADVANCE ALL THREADS'
-        executeAllThreads g, (set = {}), logs
-        update = $set: set
+        executeAllThreads g, (update.$set = {}), logs
       when 'FAST FORWARD'
-        executeThread g, args.thread, (set = {}), logs
-        executeThread g, args.thread, set, logs
-        update = $set: set
+        executeThread g, args.thread, (update.$set = {}), logs
+        executeThread g, args.thread, update.$set, logs
       when 'KILL THREAD'
         # if there's only one thread left, move it to the top instead of
         # deleting
@@ -358,7 +351,6 @@ Meteor.methods
             [ 'deck',                   g.deck ]
             [ "hand_counts.#{@userId}", 5      ]
           ])
-          delete update.$inc["hand_counts.#{@userId}"]
 
           Hands.update h._id, $set: { cards: new_hand }
           removeCard = ->
@@ -383,5 +375,4 @@ Meteor.methods
 
     removeCard()
     discardCard()
-    console.log 'updating game', JSON.stringify(update)
     updateGame gid, logs, update unless _.isEmpty update

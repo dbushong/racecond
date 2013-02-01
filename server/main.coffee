@@ -372,6 +372,9 @@ Meteor.methods
         logs.push
           who:  @userId
           what: "created #{card.name} at position #{args.instruction+1}"
+      when 'SET i'
+        update.$set = i: args.set_i
+        logs.push who: @userId, what: "set i to #{args.set_i}"
       else
         throw new Meteor.Error("card #{card.name} not yet implemented")
 

@@ -70,7 +70,7 @@ playSpecialActionCard = (pos, card) ->
       when 'set_i'
         i = prompt "Choose value to set i to (-2..2)"
         return unless i?
-        args.set_i = i
+        args.set_i = Number(i)
       else
         throw new Meteor.Error('wtf arg')
 

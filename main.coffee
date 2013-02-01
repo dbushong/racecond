@@ -113,7 +113,7 @@ Cards =
     assign: (g) -> i: Math.min(g.i+1, 5)
   'i = max(i-1, -5)':
     descr: 'FIXME'
-    assign: (g) -> i: Math.max(g.i-1, 5)
+    assign: (g) -> i: Math.max(g.i-1, -5)
   'if (i < 0)':
     descr: 'FIXME'
     copies: 2

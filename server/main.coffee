@@ -40,13 +40,13 @@ executeThread = (g, thread, set, logs) ->
       logs.push what: 'entered if clause'
     else
       logs.push what: 'skipped if clause'
-      next = entry.end_pos + 1
+      next = (entry.end_pos ? entry.pos) + 1
   else if card.while
     if card.while(g)
       logs.push what: 'entered while loop'
     else
       logs.push what: 'skipped while loop'
-      next = entry.end_pos + 1
+      next = (entry.end_pos ? entry.pos) + 1
   else if card.name is 'break'
     logs.push what: 'broke out of while loop'
     next = whiles.shift().end_pos + 1
@@ -54,7 +54,7 @@ executeThread = (g, thread, set, logs) ->
     prv = entry.parent.seq[_.indexOf(entry.parent.seq, entry) - 1]
     if Cards[entry.instr].if(g)
       logs.push what: 'skipped else clause'
-      next = entry.end_pos + 1
+      next = (entry.end_pos ? entry.pos) + 1
     else
       logs.push what: 'entered else clause'
   else
@@ -108,7 +108,6 @@ Meteor.startup ->
 
         # is the player's turn over?
         if g.actions_left is 0
-          console.log 'turn over!'
           executeAllThreads(g, set, logs)
 
           who = g.players[if g.cur_player is g.players[0] then 1 else 0]

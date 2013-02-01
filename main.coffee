@@ -55,7 +55,7 @@ Cards =
       { all } = AST g.program
       !!_.find all, (entry) ->
         /^while /.test(entry.instr) and entry.pos < position and
-          entry.end_pos+1 >= position and
+          (entry.end_pos ? entry.pos)+1 >= position and
             (all[position-1]?.depth + indent) > entry.depth
   'else':
     descr: 'FIXME'
@@ -69,10 +69,11 @@ Cards =
         # * not immediately after the "if"
         # * the "if" clause can't already have an "else" after it
         # * at the same indentation as the "if" clause
+        end = entry.end_pos ? entry.pos
         /^if /.test(entry.instr) and
-          entry.pos + 2 <= position <= entry.end_pos + 1 and
-          all[entry.end_pos+1]?.instr isnt 'else' and
-          all[entry.end_pos].depth + indent is entry.depth
+          entry.pos + 2 <= position <= end + 1 and
+          all[end + 1]?.instr isnt 'else' and
+          all[end].depth + indent is entry.depth
   'advance all threads':
     descr: 'FIXME'
     actions: 1

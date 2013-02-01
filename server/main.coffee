@@ -37,8 +37,9 @@ executeThread = (g, thread, set, logs) ->
     whiles.push ptr if /^while /.test ptr.instr
 
   if card.assign
-    old_x = g.x
-    _.extend set, card.assign(g)
+    assign = card.assign(g)
+    _.extend set, assign
+    _.extend g,   assign # for use by other threads
     what = "executed instruction: #{card.name}"
   else if card.if
     if card.if(g)
@@ -73,7 +74,7 @@ executeThread = (g, thread, set, logs) ->
       next = whl.pos
       break
 
-  set["threads.#{thread}"] = next
+  set["threads.#{thread}"] = g.threads[thread] = next
 
 executeAllThreads = (g, set, logs, auto=false) ->
   for instr, thread in g.threads

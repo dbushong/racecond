@@ -93,7 +93,7 @@ Cards =
     copies: 2
     actions: 1
     args: ['thread']
-    valid: (g, h, pos, { thread }) -> thread in g.threads
+    valid: (g, h, pos, { thread }) -> g.threads[thread]?
   'MOVE CARD':
     descr: 'FIXME'
     copies: 3
@@ -129,11 +129,10 @@ Cards =
     copies: 3
     actions: 1
     args: ['hand_instruction', 'position', 'indent']
-    valid: (g, h, pos, { hand_instruction, position }) ->
-      # FIXME: also needs to validate that's an OK place to stick the card,
-      # without recursively calling validPlays() on the whole hand
+    valid: (g, h, hpos, { hand_instruction, position }) ->
       (c = Cards[h[hand_instruction]]) and not c.actions? and
-        0 <= position <= g.program.length
+        0 <= position <= g.program.length and
+        _.findWhere validPlays(g, h, hand_instruction), { position }
   'KILL THREAD':
     descr: 'Remove any single NEXT pointer.\nChoose any NEXT card on the board to remove.  If another NEXT pointer exists, discard the selected card.  If this is the only NEXT pointer on the board, move it to the top of the program.'
     actions: 1

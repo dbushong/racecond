@@ -1,0 +1,49 @@
+#program
+  font-family monospace
+  font-size 16px
+
+.card
+  padding 10px
+  width 250px - @padding*2
+  height 175px - @padding*2
+  border 1px solid black
+  border-radius 8px
+  position relative
+  background-color #ddd
+
+  .type, .actions, .noexec
+    position absolute
+    font bold 22px monospace
+    line-height 27px
+    width 30px
+    height 30px
+    border-radius (@width/2)
+    background-color black
+    color white
+    text-align center
+    left 10px
+
+  .type
+    top 10px
+
+  .actions
+    top 42px
+
+  .noexec
+    top 74px
+    font-size 35px
+    line-height 30px
+
+  .descr
+    font normal 12px sans-serif
+    margin-top 35px
+    text-align center
+
+  h1
+    padding 5px
+    font bold 22px monospace
+    border 2px solid black
+    border-radius 9px
+    text-align center
+    background-color white
+    margin 0 0 0 40px
